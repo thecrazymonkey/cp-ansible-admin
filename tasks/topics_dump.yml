@@ -13,14 +13,14 @@
 
 - name: Set Only Essential Fields and Non-protected Topics
   debug: 
-     msg='{{ item.topic_name | regex_search(topic_protected) }}'
+     msg='{{ item.topic_name | regex_search(topic_protected) == none }}'
   loop: "{{ topics_list_temp.json.data }}"
 
 - name: Set Only Essential Fields and Non-protected Topics
   set_fact: 
      topics_list: '{{ topics_list | default([]) +  [{ "topic_name": item.topic_name, "replication_factor" : item.replication_factor }] }}'
   loop: "{{ topics_list_temp.json.data }}"
-  when: item.topic_name | regex_search(topic_protected)| string| length == 0
+  when: item.topic_name | regex_search(topic_protected) == none
 
 - name: Process List Of Topics
   block:
