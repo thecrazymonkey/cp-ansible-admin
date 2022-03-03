@@ -1,0 +1,21 @@
+- name: Set delete
+# check the topics to add, figure out the config updates later
+  vars:
+    configs_in: "{{ topic_in.configs }}"
+    configs_dump: "{{ topic_state.configs }}"
+  block:
+    # - debug:
+    #     msg="configs>{{ topic_in }}"
+    # - debug:
+    #     msg="configs_dump>{{ topic_dump }}"    
+    - set_fact: 
+        configs_to_delete: "{{ configs_in + [{'name': item.name, 'operation': 'DELETE'}] }}"
+      loop: "{{ configs_dump }}"
+      when: item.name not in (configs_in | items2dict(key_name='name'))
+    - debug:
+        msg="Config delete>{{ configs_to_delete|d([]) }}"
+    - set_fact:
+        topics_to_reconfigure_configs: "{{topics_to_reconfigure_configs + [topic_in | combine({ 'configs' : (configs_to_delete| d(topic_in.configs))} )]}}"        
+    # - debug:
+    #     msg="Config merged>{{ topics_to_reconfigure_configs }}"
+

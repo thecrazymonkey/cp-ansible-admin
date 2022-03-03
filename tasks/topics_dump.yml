@@ -1,0 +1,76 @@
+---
+# build a configuration structure from current state of topics/configs in the cluster
+- name: Get Topics List
+  uri:
+    url: "{{res_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    url_username: "{{rest_user}}"
+    url_password: "{{rest_user_password}}"
+    body_format: json
+  register: topics_list_temp
+
+- name: Set Only Essential Fields and Non-protected Topics
+  debug: 
+     msg='{{ item.topic_name | regex_search(topic_protected) }}'
+  loop: "{{ topics_list_temp.json.data }}"
+
+- name: Set Only Essential Fields and Non-protected Topics
+  set_fact: 
+     topics_list: '{{ topics_list | default([]) +  [{ "topic_name": item.topic_name, "replication_factor" : item.replication_factor }] }}'
+  loop: "{{ topics_list_temp.json.data }}"
+  when: item.topic_name | regex_search(topic_protected)| string| length == 0
+
+- name: Process List Of Topics
+  block:
+    - name: Get Partitions List
+      uri:
+        url: "{{res_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/partitions"
+        method: GET
+        validate_certs: false
+        force_basic_auth: true
+        url_username: "{{rest_user}}"
+        url_password: "{{rest_user_password}}"
+        body_format: json
+      register: partitions_list
+      loop: "{{ topics_list }}"
+
+    - name: Evaluate Partitions Count
+      set_fact: 
+        topics_out_partitions: '{{ topics_out_partitions | default([]) +  [{ "topic_name": item.json.data[0].topic_name, "partitions_count" : item.json.data | count }] }}'
+      loop: "{{partitions_list.results}}"
+
+    - name: Get Topics Configs
+      uri:
+        url: "{{res_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/configs"
+        method: GET
+        validate_certs: false
+        force_basic_auth: true
+        url_username: "{{rest_user}}"
+        url_password: "{{rest_user_password}}"
+        body_format: json
+        status_code: 200
+      register: configs_list
+      loop: "{{ topics_list }}"
+
+    # filter out static and default
+    - name: Filter Static and Default Configs
+      set_fact: 
+        topics_out_configs: '{{ topics_out_configs | default([]) +  [{ "topic_name": item.1.topic_name, "configs": { item.1.name : item.1.value }}] }}'
+      loop: "{{ configs_list.results | d([]) | subelements('json.data') }}"
+      when: item.1.source not in ['DEFAULT_CONFIG','STATIC_BROKER_CONFIG']    
+
+    # combine all  
+    - name: Combine Single List
+      set_fact:
+        topics_mapped: "{{ topics_mapped|default([]) + [item.1|combine(recursive=True)] }}"
+      loop: "{{ (topics_list + topics_out_partitions + topics_out_configs)|groupby('topic_name') }}"
+
+    - name: Cleanup
+      set_fact:
+        topics_current: '{{ topics_current | default([]) +  [{ "topic_name": item.topic_name, "replication_factor": item.replication_factor, "partitions_count": item.partitions_count, "configs": item.configs|d({})|dict2items(key_name="name", value_name="value")}] }}'
+      loop: "{{ topics_mapped }}"
+
+  when: topics_list | d([]) | length > 0
+

@@ -1,0 +1,7 @@
+.idea
+.vscode
+.DS_Store
+.python-version
+.fake
+.ionide
+hosts_test.yml

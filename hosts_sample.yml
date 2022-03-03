@@ -1,0 +1,61 @@
+all:
+  vars:
+    ansible_become: false
+    res_server_url: https://kafka1.ivan.ps.confluent.io:8090
+    rest_user: alice
+    rest_user_password: alice-secret
+# get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn'      
+    cluster_id: P7G2tU9ySSuOrh4bbeeCBQ
+# sample topics structure      
+    topics:
+# here is config change - value change and value delete    
+      - topic_name: test
+        partitions_count: 6
+        replication_factor: 3
+        configs:
+          - name: min.insync.replicas
+            value: "2"
+      - topic_name: test2
+# here is partitions_count increase      
+        partitions_count: 6
+        replication_factor: 3
+        configs:
+          - name: min.insync.replicas
+            value: "1"
+          - name: retention.ms
+            value: "60480000"
+# test3 - to delete           
+      - topic_name: test5
+# here is topic to be added      
+        partitions_count: 6
+        replication_factor: 3
+        configs:
+          - name: min.insync.replicas
+            value: "2"
+          - name: retention.ms
+            value: "604800000"
+      - topic_name: test6
+# here is topic to be added      
+        partitions_count: 6
+        replication_factor: 3
+        configs:
+          - name: min.insync.replicas
+            value: "2"
+          - name: retention.ms
+            value: "60480000"
+# defaults
+# topics delete is disabled by default
+    topic_delete_enabled: false
+# partitions management TBD  
+    topic_partitions_enabled: false
+# prefix when embedded proxy is used
+    topic_cluster_prefix: "/kafka"
+# list regex representing all topics you want to be left alone
+    topic_protected: ^_confluent.*|^connect.*|^ksql.*|^test.*
+
+# global variables
+    topics_current: []
+    topics_to_reconfigure_part: []
+    topics_to_reconfigure_configs: []
+    topics_to_add: []
+    topics_to_delete: []

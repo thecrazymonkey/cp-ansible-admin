@@ -1,0 +1,65 @@
+---
+# make out delta operation from the existing and intended topics setup
+# input topics_dump - current state; topics - desired state
+- name: Delta Inputs
+  block:
+    - debug:
+        msg="Current state>{{ topics_current }}"
+    - debug:
+        msg="Desired state>{{ topics }}"    
+
+- name: To add
+# check the topics to add, figure out the config updates later
+  set_fact: 
+    topics_to_add: "{{topics_to_add + [item] }}"
+  loop: "{{ topics }}"
+  when: item.topic_name in topics_to_add_name        
+  vars:
+    topics_to_add_name: "{{topics | map(attribute='topic_name') | difference(topics_current | map(attribute='topic_name') )}}"
+    topics_to_add: []
+
+- name: To remove
+# only check against the topic names, TODO might need to add check against "protected" topic list
+  set_fact: 
+    topics_to_delete: "{{topics_current | map(attribute='topic_name') | difference(topics | map(attribute='topic_name')) | list }}"
+
+# initialize list with changes
+- name: Initialize Diffs
+  block:
+    - set_fact: 
+       topics_to_reconfigure: "{{topics | difference(topics_current) }}"
+    - debug:
+       msg="To reconfigure>{{ topics_to_reconfigure }}"    
+
+- name: To reconfigure partitions
+# check reconfiguration required - only for topics we are not deleting
+  set_fact:
+    topics_to_reconfigure_part: "{{ topics_to_reconfigure_part + [{'topic_name': item.1.0.topic_name, 'partitions_count': item.1.0.partitions_count}] }}"
+  loop: "{{ (topics_to_reconfigure + topics_current) | groupby('topic_name')}}"    
+  when: (item.1.0.partitions_count > (item.1.1.partitions_count|d(0))) and (item.1.1.partitions_count|d(0) > 0) and (item.1.0.topic_name not in topics_to_delete)
+
+- name: To reconfigure configs
+    # check the configs for changes 
+  debugger: on_failed
+  include_tasks: tasks/configs_helper.yml
+  # debug:
+  #    msg="{{item_topic.1.1.configs|d([])|count > 0}}--{{item_topic.1.0.configs | symmetric_difference(item_topic.1.1.configs|d([]))}}--{{item_topic.1.0.topic_name not in topics_to_delete}}"
+  loop: "{{ (topics_to_reconfigure + topics_current) | groupby('topic_name')}}"    
+  loop_control:
+    loop_var: item_topic
+  when: (item_topic.1.1.configs|d([])|count > 0) and _test and (item_topic.1.0.topic_name not in topics_to_delete)
+  vars:
+    _test: "{{ item_topic.1.0.configs|d([]) | symmetric_difference(item_topic.1.1.configs|d([])) | length > 0}}"
+    topic_in: "{{ item_topic.1.0 }}"
+    topic_state: "{{ item_topic.1.1 }}"   
+
+- name: Print lists  
+  block:
+    - debug:
+       var: topics_to_add
+    - debug:
+       var: topics_to_delete
+    - debug:
+       var: topics_to_reconfigure_part
+    - debug:
+       var: topics_to_reconfigure_configs
