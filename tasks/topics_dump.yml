@@ -10,11 +10,12 @@
     url_password: "{{rest_user_password}}"
     body_format: json
   register: topics_list_temp
+  check_mode: no
 
 - name: Set Only Essential Fields and Non-protected Topics
   set_fact: 
      topics_list: '{{ topics_list | default([]) +  [{ "topic_name": item.topic_name, "replication_factor" : item.replication_factor }] }}'
-  loop: "{{ topics_list_temp.json.data }}"
+  loop: "{{ topics_list_temp.json.data | d([]) }}"
   when: item.topic_name | regex_search(topic_protected) == none
 
 - name: Process List Of Topics
@@ -30,6 +31,7 @@
         body_format: json
       register: partitions_list
       loop: "{{ topics_list }}"
+      check_mode: no
 
     - name: Evaluate Partitions Count
       set_fact: 
@@ -48,6 +50,7 @@
         status_code: 200
       register: configs_list
       loop: "{{ topics_list }}"
+      check_mode: no
 
     # filter out static and default
     - name: Filter Static and Default Configs

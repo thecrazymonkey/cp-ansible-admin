@@ -16,6 +16,7 @@
       topics_in: "{{ topics_to_add }}"
     when: 
       - topics_to_add|length > 0
+      - not ansible_check_mode
 
   - name: Delete topics 
     include_tasks: tasks/topics_delete.yml
@@ -24,6 +25,7 @@
     when: 
       - topics_to_delete|length > 0
       - topic_delete_enabled
+      - not ansible_check_mode
 
   - name: Update partitions
     include_tasks: tasks/topics_update_partitions.yml
@@ -32,6 +34,7 @@
     when: 
       - topics_to_reconfigure_part|length > 0
       - topic_partitions_enabled
+      - not ansible_check_mode
 
   - name: Update topics 
     include_tasks: tasks/topics_update.yml
@@ -39,4 +42,5 @@
       topics_in: "{{ topics_to_reconfigure_configs }}"
     when: 
       - topics_to_reconfigure_configs|length > 0
+      - not ansible_check_mode
   
