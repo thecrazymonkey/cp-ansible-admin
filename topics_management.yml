@@ -28,7 +28,7 @@
       - not ansible_check_mode
 
   - name: Update partitions
-    include_tasks: tasks/topics_update_partitions.yml
+    include_tasks: tasks/topics_partitions_update.yml
     vars:
       topics_in: "{{ topics_to_reconfigure_part }}"
     when: 

@@ -6,6 +6,12 @@ all:
     rest_user_password: alice-secret
 # get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn'      
     cluster_id: P7G2tU9ySSuOrh4bbeeCBQ
+# properties for Kafka Topics command - needed only for partitions_count increase     
+    kafka_broker_port: 9091
+    kafka_broker_client_config_file: ./settings/client.properties
+    secrets_protection_masterkey: blahblah
+    binary_base_path: /Users/ikunz/confluent-7.0.1    
+    
 # sample topics structure      
     topics:
 # here is config change - value change and value delete    

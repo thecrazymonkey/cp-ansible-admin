@@ -3,19 +3,14 @@
 - name: Add partitions
 # not supported via REST API yet - needs direct call to Kafka Admin API
   shell: |
-    {{ binary_base_path }}/bin/kafka-topics --bootstrap-server {{inventory_hostname}}:{{kafka_broker_listeners[kafka_broker_inter_broker_listener_name]['port']}} \
-      --alter --topic {{ item.topic_name }} --partitions {{ item.partitions_count }} --command-config {{kafka_broker.client_config_file}}
+    {{ binary_base_path }}/bin/kafka-topics --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
+      --alter --topic {{ item.topic_name }} --partitions {{ item.partitions_count }} --command-config {{kafka_broker_client_config_file}}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: topics_result
   # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
-  until: topics.stdout_lines|length == 0 and 'ERROR' not in topics.stderr
+  until: topics_result.stdout_lines|length == 0 and 'ERROR' not in topics_result.stderr
   changed_when: "topics_result.rc == 0"
   check_mode: false
-  loop: "{{topics_in |flatten(levels=1)}}"
-  when: 
-    - not ansible_check_mode
+  loop: "{{topics_in}}"
 
-# - name: test
-#   debug: msg="Item0>{{item.0.topic_name}}<:Item1>{{item.1.name}}:{{item.1.value}}<"
-#   loop: "{{ topics | subelements('configs') }}"
