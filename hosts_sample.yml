@@ -51,7 +51,7 @@ all:
 # prefix when embedded proxy is used
     topic_cluster_prefix: "/kafka"
 # list regex representing all topics you want to be left alone
-    topic_protected: ^_confluent.*|^connect.*|^ksql.*|^test.*
+    topic_protected: ^_confluent.*|^connect.*|^ksql.*
 
 # global variables
     topics_current: []
