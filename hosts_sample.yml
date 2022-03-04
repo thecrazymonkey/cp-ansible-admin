@@ -1,17 +1,18 @@
 all:
   vars:
     ansible_become: false
-    res_server_url: https://kafka1.ivan.ps.confluent.io:8090
+    res_server_url: https://kafka1.confluent.io:8090
     rest_user: alice
     rest_user_password: alice-secret
 # get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn'      
     cluster_id: P7G2tU9ySSuOrh4bbeeCBQ
 # properties for Kafka Topics command - needed only for partitions_count increase     
+    kafka_broker_hostname: kafka1.confluent.io
     kafka_broker_port: 9091
     kafka_broker_client_config_file: ./settings/client.properties
     secrets_protection_masterkey: blahblah
     binary_base_path: /Users/ikunz/confluent-7.0.1    
-    
+
 # sample topics structure      
     topics:
 # here is config change - value change and value delete    
@@ -57,7 +58,7 @@ all:
 # prefix when embedded proxy is used
     topic_cluster_prefix: "/kafka"
 # list regex representing all topics you want to be left alone
-    topic_protected: ^_confluent.*|^connect.*|^ksql.*
+    topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
 
 # global variables
     topics_current: []
