@@ -17,6 +17,4 @@
       }
     status_code: 204
   loop: "{{ topics_in |flatten(levels=1) }}"
-  when: 
-    - not ansible_check_mode
 

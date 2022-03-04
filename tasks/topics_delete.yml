@@ -12,6 +12,4 @@
   register: result
   failed_when: result.status != 204 and result.json.error_code|int != 40403
   loop: "{{ topics_in }}"
-  when: 
-    - not ansible_check_mode
-
+ 

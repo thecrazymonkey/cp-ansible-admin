@@ -11,6 +11,5 @@
   # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
   until: topics_result.stdout_lines|length == 0 and 'ERROR' not in topics_result.stderr
   changed_when: "topics_result.rc == 0"
-  check_mode: false
   loop: "{{topics_in}}"
 
