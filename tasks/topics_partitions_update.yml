@@ -9,7 +9,7 @@
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: topics_result
   # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
-  until: topics_result.stdout_lines|length == 0 and 'ERROR' not in topics_result.stderr
+  until: topics_result.rc == 0 and 'ERROR' not in topics_result.stderr
   changed_when: "topics_result.rc == 0"
   loop: "{{topics_in}}"
 
