@@ -40,7 +40,6 @@
 
 - name: To reconfigure configs
     # check the configs for changes 
-  debugger: on_failed
   include_tasks: tasks/configs_helper.yml
   # debug:
   #    msg="{{item_topic.1.1.configs|d([])|count > 0}}--{{item_topic.1.0.configs | symmetric_difference(item_topic.1.1.configs|d([]))}}--{{item_topic.1.0.topic_name not in topics_to_delete}}"
