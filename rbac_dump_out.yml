@@ -1,0 +1,82 @@
+rolebindings:
+- clusterName: ivan-cluster
+  name: ivan-cluster-0
+  principal: User:alice
+  resources:
+  - name: test
+    patternType: PREFIXED
+    resourceType: Group
+  - name: test
+    patternType: PREFIXED
+    resourceType: Topic
+  role: ResourceOwner
+- clusterName: ivan-cluster
+  name: ivan-cluster-1
+  principal: User:connectAdmin
+  resources:
+  - name: _confluent-monitoring
+    patternType: PREFIXED
+    resourceType: Topic
+  role: DeveloperWrite
+- clusterName: ivan-cluster
+  name: ivan-cluster-2
+  principal: User:connectAdmin
+  resources:
+  - name: operator.connect
+    patternType: LITERAL
+    resourceType: Group
+  - name: operator.connect-
+    patternType: PREFIXED
+    resourceType: Topic
+  role: ResourceOwner
+- clusterName: ivan-cluster
+  name: ivan-cluster-3
+  principal: User:ksqlDBAdmin
+  resources:
+  - name: kafka-cluster
+    patternType: LITERAL
+    resourceType: Cluster
+  - name: operator.ksqldb_
+    patternType: PREFIXED
+    resourceType: TransactionalId
+  role: DeveloperWrite
+- clusterName: ivan-cluster
+  name: ivan-cluster-4
+  principal: User:ksqlDBAdmin
+  resources:
+  - name: _confluent-ksql-operator.ksqldb_
+    patternType: PREFIXED
+    resourceType: Group
+  - name: _confluent-ksql-operator.ksqldb__command_topic
+    patternType: LITERAL
+    resourceType: Topic
+  - name: operator.ksqldb_ksql_processing_log
+    patternType: LITERAL
+    resourceType: Topic
+  role: ResourceOwner
+- clusterName: ivan-cluster
+  name: ivan-cluster-5
+  principal: User:schemaregistryUser
+  resources:
+  - name: id_schemaregistry_operator
+    patternType: LITERAL
+    resourceType: Group
+  - name: _confluent-license
+    patternType: LITERAL
+    resourceType: Topic
+  - name: _schemas_schemaregistry_operator
+    patternType: LITERAL
+    resourceType: Topic
+  role: ResourceOwner
+- clusterName: ivan-cluster
+  name: ivan-cluster-6
+  principal: User:bob
+  role: SystemAdmin
+- clusterName: ivan-cluster
+  name: ivan-cluster-7
+  principal: User:controlcenterAdmin
+  role: SystemAdmin
+- clusterName: ivan-cluster
+  name: ivan-cluster-8
+  principal: User:superUser
+  role: SystemAdmin

@@ -1,0 +1,108 @@
+---
+# build a configuration structure from current state of topics/configs in the cluster
+- set_fact:
+    scope: "{{ { 'clusterName' : cluster_name } }}"
+    rbac_list: []
+    principals_list: []
+    rbac_mapped: []
+
+- debug:
+    msg="{{scope}}"
+
+- name: Get Roles List
+  uri:
+    url: "{{mds_server_url}}/security/1.0/roleNames"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    force: yes
+    url_username: "{{mds_user}}"
+    url_password: "{{mds_user_password}}"
+    body_format: json
+  register: roles_list
+  check_mode: no
+- debug:
+    msg="{{roles_list.json}}"
+
+
+
+- name: Get Principals For Roles List
+  uri:
+    url: "{{mds_server_url}}/security/1.0/lookup/role/{{ item }}"
+    method: POST
+    validate_certs: false
+    force_basic_auth: true
+    force: yes
+    url_username: "{{mds_user}}"
+    url_password: "{{mds_user_password}}"
+    body_format: json
+    body: "{{scope}}"
+  register: principals_list_tmp
+  check_mode: no
+  loop: "{{ roles_list.json }}"
+
+- debug: 
+    msg=">>{{item.0.item}}<<>>{{item.1}}<<"
+  loop: "{{ principals_list_tmp.results | d([]) | subelements('json') }}"
+
+   # filter out static and default
+- name: Get List Of Principals
+  set_fact: 
+    principals_list: '{{ principals_list +  [{ "role": item.0.item, "principal": item.1 }] }}'
+  loop: "{{ principals_list_tmp.results | d([]) | subelements('json') }}"
+- debug:
+    msg="{{principals_list}}"
+  
+
+- name: Get Resources For Principal And Role
+# only for non-Admin roles
+  uri:
+    url: "{{mds_server_url}}/security/1.0/principals/{{item.principal}}/roles/{{item.role}}/resources"
+    method: POST
+    validate_certs: false
+    force_basic_auth: true
+    force: yes
+    url_username: "{{mds_user}}"
+    url_password: "{{mds_user_password}}"
+    body_format: json
+    body: "{{scope}}"
+  register: resources_list_tmp
+  loop: "{{ principals_list }}"
+#  when: item.role | regex_search("^\w+Admin$") == none
+  check_mode: no
+
+- name: Get List Of Principals, Roles and Resources
+  set_fact: 
+    rbac_list: '{{ rbac_list +  [ { "tmppk": item.0.item.principal+item.0.item.role, "principal": item.0.item.principal, "role": item.0.item.role, "clusterName" : cluster_name, "resources" : [item.1] }] }}'
+  loop: "{{ resources_list_tmp.results | subelements('json') }}"
+
+# combine all  
+- name: Combine Resources Into Single List
+  set_fact:
+    rbac_current: "{{ rbac_current + [item.1|combine(list_merge='append')] }}"
+  loop: "{{ rbac_list|groupby('tmppk') }}"
+
+- name: Add Admins
+  set_fact: 
+    rbac_current: '{{ rbac_current +  [ { "principal": item.principal, "role": item.role, "clusterName" : cluster_name }] }}'
+  loop: "{{ principals_list }}"
+  when: item.role | regex_search("^\w+Admin$") != none
+
+# - debug: 
+#     var: rbac_current
+- name: Write to a file  
+  block:
+    - name: Prepare For Writing
+      set_fact:
+        rbac_mapped: "{{ rbac_mapped|d([]) + [{'name': cluster_name+'-'+counter|string, 'principal': item.principal, 'role': item.role, 'clusterName': cluster_name }|combine(myitem)] }}"
+      loop: "{{ rbac_current }}"
+      loop_control:
+        index_var: counter
+      vars:
+        myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
+    - name: Dump To A File
+      local_action: copy content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{rbac_dump_destination}}"
+      vars:
+        to_dump: "{{ {'rolebindings': rbac_mapped} }}"    
+  when: rbac_dump_file
+

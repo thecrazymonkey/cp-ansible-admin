@@ -1,0 +1,20 @@
+---
+- name: Get scopes
+  uri:
+    url: "{{mds_server_url}}/security/1.0/registry/clusters"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    url_username: "{{mds_user}}"
+    url_password: "{{mds_user_password}}"
+    body_format: json
+  register: clusters_list
+  check_mode: no
+
+- name: Get List Of Scopes
+  set_fact: 
+    scopes_list: '{{ scopes_list | d([]) +  [item.clusterName] }}'
+  loop: "{{ clusters_list.json }}"
+
+- debug:
+    msg="{{scopes_list}}"

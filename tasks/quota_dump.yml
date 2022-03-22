@@ -1,0 +1,31 @@
+---
+# Low level topic operations - using Confluent Server v3 API
+- name: List quotas
+# not supported via REST API yet - needs direct call to Kafka Admin API
+  shell: |
+    {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
+      --describe --entity-type clients --command-config {{kafka_broker_client_config_file}}
+  environment:
+    CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
+  register: quotas_result
+  # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
+  until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
+  changed_when: "quotas_result.rc == 0"
+
+- debug:
+    msg="{{item}}"
+  loop: "{{quotas_result.stdout_lines}}"
+
+# parse into useable structure
+- set_fact:
+    quotas_current: "{{quotas_current | d([]) + [{'client_id': client_id, 'producer_byte_rate': client_produce[0]|d(omit), 'consumer_byte_rate': client_consume[0]|d(omit), 'request_percentage': client_request[0]| d(omit)}] }}"
+  loop: "{{quotas_result.stdout_lines}}"
+  vars:
+    client_produce: "{{ item | regex_search('.*producer_byte_rate=([0-9.]{0,}).*', '\\1') }}"
+    client_consume: "{{ item | regex_search('.*consumer_byte_rate=([0-9.]{0,}).*', '\\1') }}"
+    client_request: "{{ item | regex_search('.*request_percentage=([0-9.]{0,}).*', '\\1') }}"
+    client_id: >-
+      {{ item | regex_replace(".*\'([a-zA-Z0-9]{1,})\'.*",'\1') }}
+
+- debug:
+    msg="{{quotas_current}}"

@@ -5,4 +5,5 @@
 .fake
 .ionide
 hosts_test.yml
+test.yml
 settings

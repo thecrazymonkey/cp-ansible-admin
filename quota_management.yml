@@ -1,0 +1,22 @@
+---
+- name: Quotas management
+  gather_facts: false
+  hosts: localhost
+
+  tasks:
+  - name: Dump Quotas 
+    include_tasks: tasks/quota_dump.yml
+
+  - name: Delta Quotas
+    include_tasks: tasks/quota_delta.yml
+
+  - name: Add Quotas
+    include_tasks: tasks/quota_add.yml
+    when: 
+      - quotas_to_add|length > 0
+
+  - name: Delete Quotas
+    include_tasks: tasks/quota_delete.yml
+    when: 
+      - quotas_configs_delete|length > 0
+

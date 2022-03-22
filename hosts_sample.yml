@@ -66,3 +66,116 @@ all:
     topics_to_reconfigure_configs: []
     topics_to_add: []
     topics_to_delete: []
+
+# rbac section
+
+    mds_user: mds
+    mds_user_password: mds
+    mds_server_url: https://kafka1.confluent.io:8090
+   
+    rolebindings:
+    - clusterName: test-cluster
+      name: test-cluster-0
+      principal: User:connectAdmin
+      resources:
+      - name: _confluent-monitoring
+        patternType: PREFIXED
+        resourceType: Topic
+      role: DeveloperWrite
+    - clusterName: test-cluster
+      name: test-cluster-1
+      principal: User:connectAdmin
+      resources:
+      - name: operator.connect
+        patternType: LITERAL
+        resourceType: Group
+      - name: operator.connect-
+        patternType: PREFIXED
+        resourceType: Topic
+      role: ResourceOwner
+    - clusterName: test-cluster
+      name: test-cluster-2
+      principal: User:ksqlDBAdmin
+      resources:
+      - name: kafka-cluster
+        patternType: LITERAL
+        resourceType: Cluster
+      - name: operator.ksqldb_
+        patternType: PREFIXED
+        resourceType: TransactionalId
+      role: DeveloperWrite
+    - clusterName: test-cluster
+      name: test-cluster-3
+      principal: User:ksqlDBAdmin
+      resources:
+      - name: _confluent-ksql-operator.ksqldb_
+        patternType: PREFIXED
+        resourceType: Group
+      - name: _confluent-ksql-operator.ksqldb__command_topic
+        patternType: LITERAL
+        resourceType: Topic
+      - name: operator.ksqldb_ksql_processing_log
+        patternType: LITERAL
+        resourceType: Topic
+      role: ResourceOwner
+    - clusterName: test-cluster
+      name: test-cluster-4
+      principal: User:schemaregistryUser
+      resources:
+      - name: id_schemaregistry_operator
+        patternType: LITERAL
+        resourceType: Group
+      - name: _confluent-license
+        patternType: LITERAL
+        resourceType: Topic
+      - name: _schemas_schemaregistry_operator
+        patternType: LITERAL
+        resourceType: Topic
+      role: ResourceOwner
+    - clusterName: test-cluster
+      name: test-cluster-5
+      principal: User:controlcenterAdmin
+      role: SystemAdmin
+    - clusterName: test-cluster
+      name: test-cluster-6
+      principal: User:superUser
+      role: SystemAdmin
+    - name: test-cluster-7
+      clusterName: test-cluster
+      principal: User:alice
+      resources:
+      - name: test
+        patternType: PREFIXED
+        resourceType: Topic
+      # - name: test
+      #   patternType: PREFIXED
+      #   resourceType: Group
+      role: ResourceOwner
+    - name: test-cluster-8
+      clusterName: test-cluster
+      principal: User:bob
+      role: SystemAdmin
+
+    rbac_current: [] 
+    rbac_cluster_whitelist: test-cluster
+    rbac_dump_file: true
+    rbac_dump_destination: rbac_dump_out.yml
+    rbac_to_add: []
+    rbac_to_delete: []
+
+    quotas:
+      - client_id: test
+        consumer_byte_rate: 100002.0
+        producer_byte_rate: 100001.0
+        # request_percentage: 30.0
+      # - client_id: test2
+      #   consumer_byte_rate: 100002.0
+      #   producer_byte_rate: 100001.0
+      - client_id: test3
+        consumer_byte_rate: 100003.0
+        producer_byte_rate: 100003.0
+        request_percentage: 20.0
+      - client_id: test4
+        consumer_byte_rate: 100004.0
+        producer_byte_rate: 100004.0
+        request_percentage: 20.0

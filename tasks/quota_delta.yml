@@ -1,0 +1,35 @@
+---
+# make out delta operation from the existing and intended topics setup
+# input topics_dump - current state; topics - desired state
+- name: Delta Inputs
+  block:
+    - debug:
+        msg="Current state>{{ quotas_current }}"
+    - debug:
+        msg="Desired state>{{ quotas }}"    
+
+- name: To add
+# check the topics to add, figure out the config updates later
+  set_fact: 
+    quotas_to_add: "{{quotas | map(attribute='client_id') | difference(quotas_current | map(attribute='client_id')) | list}}"
+    quotas_configs_delete: []
+
+- name: To delete quotas
+    # check the quotas for removals, the rest can be processed as is 
+  set_fact:
+    quotas_configs_delete: "{{ quotas_configs_delete|d([])+[{'client_id': item.0, 'delete': diff_keys|difference(['client_id'])}]}}"
+  loop: "{{ (quotas_to_reconfigure_raw + quotas_current) | groupby('client_id')}}"    
+  vars:
+     skeys: "{{ item.1.0.keys()|d([])|list }}"
+     tem: "{{ item.1.1 | d({})}}"
+     tkeys: "{{ tem.keys()| d([])|list }}"
+     diff_keys: "{{ skeys|symmetric_difference(tkeys) }}"
+     quotas_to_reconfigure_raw: "{{quotas | difference(quotas_current) }}"
+  when: item.1.0.client_id not in quotas_to_add and diff_keys|length != 0    
+
+- name: Print lists  
+  block:
+    - debug:
+       var: quotas_to_add
+    - debug:
+       var: quotas_configs_delete

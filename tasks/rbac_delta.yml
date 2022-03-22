@@ -1,0 +1,108 @@
+---
+
+# first PK - server+principal and find all Admin deltas
+# second PK - server+principal+role and find all resources deltas
+
+# make out delta operation from the existing and intended topics setup
+# input topics_dump - current state; topics - desired state
+- name: Delta Inputs
+  block:
+    - debug:
+        msg="Current state>{{ rbac_current }}"
+    - debug:
+        msg="Desired state>{{ rolebindings }}"    
+
+- name: Add PKs current
+  set_fact: 
+    rbac_current_pk: '{{ rbac_current_pk|d([]) +  [ item| combine({"tmppk": item.principal+item.role})] }}'
+  loop: "{{ rbac_current }}"
+  when: item.clusterName == cluster_name   
+
+- name: Add PKs desired
+  # skip the rule name
+  set_fact: 
+    rolebindings_pk: '{{ rolebindings_pk|d([]) +  [ { "tmppk": item.principal+item.role, "principal": item.principal, "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
+  loop: "{{ rolebindings }}"
+  when: item.clusterName == cluster_name   
+  vars:
+     myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
+
+- name: Delta Inputs
+  block:
+    - debug:
+        msg="Current state>{{ rbac_current_pk }}"
+    - debug:
+        msg="Desired state>{{ rolebindings_pk }}"    
+    - debug:
+        msg="To add >{{rolebindings_pk | map(attribute='tmppk') | difference(rbac_current_pk | map(attribute='tmppk') )}}"    
+
+- name: To Add
+# # check rolebindings to add
+  set_fact: 
+    rbac_to_add: "{{rbac_to_add|d([]) + item.1 }}"
+  # debug:
+  #   msg="{{item}}"    
+  loop: "{{(rolebindings_pk + rbac_current_pk) | groupby('tmppk') }}"
+  when: 
+    - item.0 in roles_to_add_name 
+  vars:
+    roles_to_add_name: "{{rolebindings_pk | map(attribute='tmppk') | difference(rbac_current_pk | map(attribute='tmppk') )}}"
+
+- debug:
+    msg="To add >{{rbac_to_add}}"    
+
+- name: To Remove
+# # check rolebindings to remove
+  set_fact: 
+    rbac_to_delete: "{{rbac_to_delete|d([]) + item.1 }}"
+  # debug:
+  #   msg="{{item}}"    
+  loop: "{{(rbac_current_pk+rolebindings_pk) | groupby('tmppk') }}"
+  when: 
+    - item.0 in roles_to_delete_name
+  vars:
+    roles_to_delete_name: "{{rbac_current_pk | map(attribute='tmppk') | difference(rolebindings_pk | map(attribute='tmppk') )}}"
+    
+- name: Initialize Diffs
+  block:
+    - set_fact: 
+       rbac_to_reconfigure: "{{rolebindings_pk | difference(rbac_current_pk) }}"
+    - debug:
+       msg="To reconfigure>{{ rbac_to_reconfigure }}"    
+
+- name: To reconfigure resources
+    # check the configs for changes 
+  include_tasks: tasks/rbac_helper.yml
+  # debug:
+  #   msg:
+  #     - "{{item_rbac.1.1.resources|d([])}}"
+  #     - "{{item_rbac.1.0.resources}}"
+  #     - "{{item_rbac.1.1.resources|d([])|count > 0}}"
+  #     - "{{item_rbac.1.0.resources | symmetric_difference(item_rbac.1.1.resources|d([]))}}"
+  #     - "{{item_rbac.1.0.tmppk not in rbac_to_delete}}"
+  loop: "{{ (rbac_to_reconfigure + rbac_current_pk) | groupby('tmppk')}}"    
+  loop_control:
+    loop_var: item_rbac
+  when: (item_rbac.1.1.resources|d([])|count > 0) and _test and (item_rbac.1.0.tmppk not in rbac_to_delete)
+  vars:
+    _test: "{{ item_rbac.1.0.resources|d([]) | symmetric_difference(item_rbac.1.1.resources|d([])) | length > 0}}"
+    rbac_in: "{{ item_rbac.1.0 }}"
+    rbac_state: "{{ item_rbac.1.1 }}"   
+
+- name: Print lists  
+  block:
+    - debug:
+       var: rbac_to_add 
+    - debug:
+       var: rbac_to_delete
+    - debug:
+       var: resources_to_add
+    - debug:
+       var: resources_to_delete
+
+- name: Merge Lists
+# merge the add and delete lists       
+  set_fact:
+    rbac_to_add: "{{rbac_to_add+(resources_to_add|d([]))}}"
+    rbac_to_delete: "{{rbac_to_delete+(resources_to_delete|d([]))}}"
+
