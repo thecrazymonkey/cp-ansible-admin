@@ -10,31 +10,25 @@
     - debug:
         msg="Current state>{{ rbac_current }}"
     - debug:
-        msg="Desired state>{{ rolebindings }}"    
+        msg="Desired state>{{ rolebindings }}"  
+    - set_fact: 
+       rbac_current_pk: []
+       rolebindings_pk: []
 
 - name: Add PKs current
   set_fact: 
-    rbac_current_pk: '{{ rbac_current_pk|d([]) +  [ item| combine({"tmppk": item.principal+item.role})] }}'
+    rbac_current_pk: '{{ rbac_current_pk +  [ item| combine({"tmppk": item.principal+item.role})] }}'
   loop: "{{ rbac_current }}"
   when: item.clusterName == cluster_name   
 
 - name: Add PKs desired
   # skip the rule name
   set_fact: 
-    rolebindings_pk: '{{ rolebindings_pk|d([]) +  [ { "tmppk": item.principal+item.role, "principal": item.principal, "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
+    rolebindings_pk: '{{ rolebindings_pk +  [ { "tmppk": item.principal+item.role, "principal": item.principal, "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
   loop: "{{ rolebindings }}"
   when: item.clusterName == cluster_name   
   vars:
      myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
-
-- name: Delta Inputs
-  block:
-    - debug:
-        msg="Current state>{{ rbac_current_pk }}"
-    - debug:
-        msg="Desired state>{{ rolebindings_pk }}"    
-    - debug:
-        msg="To add >{{rolebindings_pk | map(attribute='tmppk') | difference(rbac_current_pk | map(attribute='tmppk') )}}"    
 
 - name: To Add
 # # check rolebindings to add
@@ -48,13 +42,10 @@
   vars:
     roles_to_add_name: "{{rolebindings_pk | map(attribute='tmppk') | difference(rbac_current_pk | map(attribute='tmppk') )}}"
 
-- debug:
-    msg="To add >{{rbac_to_add}}"    
-
 - name: To Remove
 # # check rolebindings to remove
   set_fact: 
-    rbac_to_delete: "{{rbac_to_delete|d([]) + item.1 }}"
+    rbac_to_delete: "{{rbac_to_delete + item.1 }}"
   # debug:
   #   msg="{{item}}"    
   loop: "{{(rbac_current_pk+rolebindings_pk) | groupby('tmppk') }}"
@@ -67,6 +58,8 @@
   block:
     - set_fact: 
        rbac_to_reconfigure: "{{rolebindings_pk | difference(rbac_current_pk) }}"
+       resources_to_add: []
+       resources_to_delete: []
     - debug:
        msg="To reconfigure>{{ rbac_to_reconfigure }}"    
 
@@ -103,6 +96,6 @@
 - name: Merge Lists
 # merge the add and delete lists       
   set_fact:
-    rbac_to_add: "{{rbac_to_add+(resources_to_add|d([]))}}"
-    rbac_to_delete: "{{rbac_to_delete+(resources_to_delete|d([]))}}"
+    rbac_to_add: "{{rbac_to_add+resources_to_add}}"
+    rbac_to_delete: "{{rbac_to_delete+resources_to_delete}}"
 

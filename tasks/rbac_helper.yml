@@ -3,8 +3,6 @@
   vars:
     resources_in: "{{ rbac_in.resources }}"
     resources_dump: "{{ rbac_state.resources }}"
-    resources_to_add: []
-    resources_to_delete: []
   block:
     - debug:
         msg="resources>{{ resources_in }}"

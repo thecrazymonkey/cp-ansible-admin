@@ -1,0 +1,19 @@
+---
+- name: Write to a file  
+  block:
+    - name: Prepare For Writing
+      set_fact:
+        rbac_mapped: "{{ rbac_mapped|d([]) + [{'name': item.clusterName+'-'+counter|string, 'principal': item.principal, 'role': item.role, 'clusterName': item.clusterName }|combine(myitem)] }}"
+      loop: "{{ rbac_current }}"
+      loop_control:
+        index_var: counter
+      vars:
+        myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
+    - name: Dump To A File
+      local_action: copy content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{rbac_dump_destination}}"
+      vars:
+        to_dump: "{{ {'rolebindings': rbac_mapped} }}"    
+  when: 
+    - rbac_dump_file
+    - not ansible_check_mode
+

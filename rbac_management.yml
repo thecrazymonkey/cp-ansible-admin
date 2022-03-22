@@ -16,6 +16,10 @@
       loop_var: scope_item
     when: scope_item | regex_search(rbac_cluster_whitelist) != none
 
+  - name: Save Rolebindings 
+    include_tasks: tasks/rbac_save.yml
+    when: rbac_current|length > 0
+
   - name: Delta Rolebindings
     include_tasks: tasks/rbac_delta.yml
     loop: "{{scopes_list}}"

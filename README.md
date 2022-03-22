@@ -10,4 +10,4 @@ RBAC - works only with clusters registered in the Cluster Registry (too lazy to 
 
 Quotas - only via kafka-configs; again REST API support is not yet available
 
-TODO - testing, possibly renaming this project, updating once the REST API availability is there for the missing features
+TODO - testing, debug output cleanup, possibly renaming this project, updating once the REST API availability is there for the missing features
