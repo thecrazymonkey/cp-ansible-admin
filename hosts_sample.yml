@@ -1,19 +1,23 @@
 all:
   vars:
     ansible_become: false
+    # configure connectivity for topics management
     rest_server_url: https://kafka1.confluent.io:8090
-    rest_user: alice
-    rest_user_password: alice-secret
+    rest_user: user
+    rest_user_password: user-secret
 # get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn'      
-    cluster_id: P7G2tU9ySSuOrh4bbeeCBQ
-# properties for Kafka Topics command - needed only for partitions_count increase     
+    cluster_id: 
+# properties for Kafka command line use - needed only for partitions_count increase and quota management     
     kafka_broker_hostname: kafka1.confluent.io
     kafka_broker_port: 9091
+# add configuration file details for client connectivity to the cluster    
     kafka_broker_client_config_file: ./settings/client.properties
+# provide secrets protection key if applicable    
     secrets_protection_masterkey: blahblah
-    binary_base_path: /Users/ikunz/confluent-7.0.1    
+# path to binaries    
+    binary_base_path: /home/confluent/confluent-7.0.1    
 
-# sample topics structure      
+# sample desired topics state structure      
     topics:
 # here is config change - value change and value delete    
       - topic_name: test
@@ -51,11 +55,12 @@ all:
           - name: retention.ms
             value: "60480000"
 # rbac section
-
+# connectivity for the MDS connection - the user must be SystemAdmin 
     mds_user: mds
     mds_user_password: mds
     mds_server_url: https://kafka1.confluent.io:8090
-   
+
+# sample desired rolebindings state configuration   
     rolebindings:
     - clusterName: test-cluster
       name: test-cluster-0
@@ -139,6 +144,8 @@ all:
       principal: User:bob
       role: SystemAdmin
 
+# quotas management connectivity defined above
+# sample desired quotas state structure
     quotas:
       - client_id: test
         consumer_byte_rate: 100002.0
