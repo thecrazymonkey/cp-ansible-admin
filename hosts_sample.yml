@@ -1,7 +1,7 @@
 all:
   vars:
     ansible_become: false
-    res_server_url: https://kafka1.confluent.io:8090
+    rest_server_url: https://kafka1.confluent.io:8090
     rest_user: alice
     rest_user_password: alice-secret
 # get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn'      
@@ -50,23 +50,6 @@ all:
             value: "2"
           - name: retention.ms
             value: "60480000"
-# defaults
-# topics delete is disabled by default
-    topic_delete_enabled: false
-# partitions management TBD  
-    topic_partitions_enabled: false
-# prefix when embedded proxy is used
-    topic_cluster_prefix: "/kafka"
-# list regex representing all topics you want to be left alone
-    topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
-
-# global variables
-    topics_current: []
-    topics_to_reconfigure_part: []
-    topics_to_reconfigure_configs: []
-    topics_to_add: []
-    topics_to_delete: []
-
 # rbac section
 
     mds_user: mds
@@ -155,13 +138,6 @@ all:
       clusterName: test-cluster
       principal: User:bob
       role: SystemAdmin
-
-    rbac_current: [] 
-    rbac_cluster_whitelist: test-cluster
-    rbac_dump_file: true
-    rbac_dump_destination: rbac_dump_out.yml
-    rbac_to_add: []
-    rbac_to_delete: []
 
     quotas:
       - client_id: test

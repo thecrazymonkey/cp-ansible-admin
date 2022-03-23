@@ -39,10 +39,6 @@
   check_mode: no
   loop: "{{ roles_list.json }}"
 
-# - debug: 
-#     msg=">>{{item.0.item}}<<>>{{item.1}}<<"
-#   loop: "{{ principals_list_tmp.results | d([]) | subelements('json') }}"
-
    # filter out static and default
 - name: Get List Of Principals
   set_fact: 
@@ -53,7 +49,6 @@
   
 
 - name: Get Resources For Principal And Role
-# only for non-Admin roles
   uri:
     url: "{{mds_server_url}}/security/1.0/principals/{{item.principal}}/roles/{{item.role}}/resources"
     method: POST
@@ -66,7 +61,6 @@
     body: "{{scope}}"
   register: resources_list_tmp
   loop: "{{ principals_list }}"
-#  when: item.role | regex_search("^\w+Admin$") == none
   check_mode: no
 
 - name: Get List Of Principals, Roles and Resources

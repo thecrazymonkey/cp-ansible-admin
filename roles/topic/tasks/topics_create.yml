@@ -3,7 +3,7 @@
 # create topic expects collection to topic configs, returns success for already existing topics
 - name: Create topics
   uri:
-    url: "{{res_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics"
+    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics"
     method: POST
     validate_certs: false
     force_basic_auth: true

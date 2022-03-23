@@ -4,10 +4,10 @@
     resources_in: "{{ rbac_in.resources }}"
     resources_dump: "{{ rbac_state.resources }}"
   block:
-    - debug:
-        msg="resources>{{ resources_in }}"
-    - debug:
-        msg="resources_dump>{{ resources_dump }}"    
+    # - debug:
+    #     msg="resources>{{ resources_in }}"
+    # - debug:
+    #     msg="resources_dump>{{ resources_dump }}"    
     - set_fact: 
         resources_to_delete: "{{ resources_to_delete + [{'role': rbac_state.role, 'principal': rbac_state.principal, 'clusterName': rbac_state.clusterName, 'resources' : [item]}] }}"
       loop: "{{ resources_dump }}"
@@ -16,8 +16,4 @@
         resources_to_add: "{{ resources_to_add + [{'role': rbac_in.role, 'principal': rbac_in.principal, 'clusterName': rbac_in.clusterName, 'resources' : [item]}] }}"
       loop: "{{ resources_in }}"
       when: item not in resources_dump
-    - debug:
-        msg="Resources to delete>{{ resources_to_delete }}"
-    - debug:
-        msg="Resources to add >{{ resources_to_add }}"
 

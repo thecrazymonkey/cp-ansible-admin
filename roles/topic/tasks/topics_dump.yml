@@ -2,7 +2,7 @@
 # build a configuration structure from current state of topics/configs in the cluster
 - name: Get Topics List
   uri:
-    url: "{{res_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics"
+    url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics"
     method: GET
     validate_certs: false
     force_basic_auth: true
@@ -32,7 +32,7 @@
   block:
     - name: Get Partitions List
       uri:
-        url: "{{res_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/partitions"
+        url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/partitions"
         method: GET
         validate_certs: false
         force_basic_auth: true
@@ -52,7 +52,7 @@
 
     - name: Get Topics Configs
       uri:
-        url: "{{res_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/configs"
+        url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/configs"
         method: GET
         validate_certs: false
         force_basic_auth: true

@@ -16,5 +16,5 @@
     scopes_list: '{{ scopes_list | d([]) +  [item.clusterName] }}'
   loop: "{{ clusters_list.json }}"
 
-- debug:
-    msg="{{scopes_list}}"
+# - debug:
+#     msg="{{scopes_list}}"

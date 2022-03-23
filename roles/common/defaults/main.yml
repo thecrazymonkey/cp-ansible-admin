@@ -1,0 +1,10 @@
+---
+#    kafka_broker_hostname: kafka1.ivan.ps.confluent.io
+kafka_broker_hostname: ""
+kafka_broker_port: 9092
+kafka_broker_client_config_file: ./settings/client.properties
+secrets_protection_masterkey: blahblah
+binary_base_path: /home/confluent/confluent-7.0.1
+# confluent cluster describe --url ...
+cluster_id: ""
+proxy_env: {}

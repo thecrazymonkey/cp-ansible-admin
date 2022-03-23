@@ -1,0 +1,24 @@
+---
+# connectivity variables
+rest_server_url: https://rest.confluent.io:8090
+rest_user: user
+rest_user_password: user-secret
+
+# topics structure to hold desired state     
+topics: []
+# defaults
+# topics delete is disabled by default
+topic_delete_enabled: false
+# partitions management TBD  
+topic_partitions_enabled: false
+# prefix when embedded proxy is used
+topic_cluster_prefix: "/kafka"
+# list regex representing all topics you want to be left alone
+topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
+
+# global variables
+topics_current: []
+topics_to_reconfigure_part: []
+topics_to_reconfigure_configs: []
+topics_to_add: []
+topics_to_delete: []

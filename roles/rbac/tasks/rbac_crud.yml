@@ -1,5 +1,5 @@
 ---
-- name: Create Rolebindings For Principal, Role and Cluster Scope
+- name: Manage Rolebindings For Principal, Role and Cluster Scope
   uri:
     url: "{{mds_server_url}}/security/1.0/principals/{{item.principal}}/roles/{{ item.role }}"
     method: "{{http_method}}"
@@ -13,7 +13,7 @@
   loop: "{{ rbac_list }}"
   when: item.role | regex_search("^\w+Admin$") != none
 
-- name: Create Rolebindings For Principal, Scope and Set of resources
+- name: Manage Rolebindings For Principal, Scope and Set of resources
   uri:
     url: "{{mds_server_url}}/security/1.0/principals/{{item.principal}}/roles/{{ item.role }}/bindings"
     method: "{{http_method}}"

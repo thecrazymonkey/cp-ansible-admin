@@ -2,7 +2,7 @@
 # Low level topic operations - using Confluent Server v3 API
 - name: Update topics
   uri:
-    url: "{{res_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/configs:alter"
+    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/configs:alter"
     method: POST
     validate_certs: false
     force_basic_auth: true

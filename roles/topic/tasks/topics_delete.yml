@@ -3,7 +3,7 @@
 # delete reports success for topics that do not exist
 - name: Delete Topics
   uri:
-    url: "{{res_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item}}"
+    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item}}"
     method: DELETE
     validate_certs: false
     force_basic_auth: true

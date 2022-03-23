@@ -1,10 +1,6 @@
 ---
 
-# first PK - server+principal and find all Admin deltas
-# second PK - server+principal+role and find all resources deltas
-
-# make out delta operation from the existing and intended topics setup
-# input topics_dump - current state; topics - desired state
+# PK - server+principal and find all Admin deltas
 - name: Delta Inputs
   block:
     - debug:
@@ -34,8 +30,6 @@
 # # check rolebindings to add
   set_fact: 
     rbac_to_add: "{{rbac_to_add|d([]) + item.1 }}"
-  # debug:
-  #   msg="{{item}}"    
   loop: "{{(rolebindings_pk + rbac_current_pk) | groupby('tmppk') }}"
   when: 
     - item.0 in roles_to_add_name 
@@ -46,8 +40,6 @@
 # # check rolebindings to remove
   set_fact: 
     rbac_to_delete: "{{rbac_to_delete + item.1 }}"
-  # debug:
-  #   msg="{{item}}"    
   loop: "{{(rbac_current_pk+rolebindings_pk) | groupby('tmppk') }}"
   when: 
     - item.0 in roles_to_delete_name

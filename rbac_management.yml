@@ -2,46 +2,13 @@
 - name: RBAC management
   gather_facts: false
   hosts: localhost
+  environment: "{{proxy_env}}"
 
   tasks:
-  - name: Dump Scopes
-    include_tasks: tasks/rbac_scopes.yml
-
-  - name: Dump Rolebindings 
-    include_tasks: tasks/rbac_dump.yml
-    loop: "{{scopes_list}}"
-    vars:
-       cluster_name: "{{scope_item}}"
-    loop_control:
-      loop_var: scope_item
-    when: scope_item | regex_search(rbac_cluster_whitelist) != none
-
-  - name: Save Rolebindings 
-    include_tasks: tasks/rbac_save.yml
-    when: rbac_current|length > 0
-
-  - name: Delta Rolebindings
-    include_tasks: tasks/rbac_delta.yml
-    loop: "{{scopes_list}}"
-    vars:
-       cluster_name: "{{scope_item}}"
-    loop_control:
-      loop_var: scope_item
-    when: scope_item | regex_search(rbac_cluster_whitelist) != none
-
-  - name: Create Rolebindings
-    include_tasks: tasks/rbac_crud.yml
-    vars:
-      rbac_list: "{{ rbac_to_add }}"
-      http_method: POST
-    when: 
-      - rbac_to_add|length > 0
-
-  - name: Delete Rolebindings 
-    include_tasks: tasks/rbac_crud.yml
-    vars:
-      rbac_list: "{{ rbac_to_delete }}"
-      http_method: DELETE
-    when: 
-      - rbac_to_delete|length > 0
-
+  - name: Set Variables
+    import_role:
+      name: common
+      
+  - name: Process RBAC
+    import_role: 
+      name: rbac

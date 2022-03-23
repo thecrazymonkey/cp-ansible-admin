@@ -1,0 +1,41 @@
+---
+- name: Dump topics 
+  include_tasks: topics_dump.yml
+
+- name: Delta topics 
+  include_tasks: topics_delta.yml
+
+- name: Create topics 
+  include_tasks: topics_create.yml
+  vars:
+    topics_in: "{{ topics_to_add }}"
+  when: 
+    - topics_to_add|length > 0
+    - not ansible_check_mode
+
+- name: Delete topics 
+  include_tasks: topics_delete.yml
+  vars:
+    topics_in: "{{ topics_to_delete }}"
+  when: 
+    - topics_to_delete|length > 0
+    - topic_delete_enabled
+    - not ansible_check_mode
+
+- name: Update partitions
+  include_tasks: topics_partitions_update.yml
+  vars:
+    topics_in: "{{ topics_to_reconfigure_part }}"
+  when: 
+    - topics_to_reconfigure_part|length > 0
+    - topic_partitions_enabled
+    - not ansible_check_mode
+
+- name: Update topics 
+  include_tasks: topics_update.yml
+  vars:
+    topics_in: "{{ topics_to_reconfigure_configs }}"
+  when: 
+    - topics_to_reconfigure_configs|length > 0
+    - not ansible_check_mode
+
