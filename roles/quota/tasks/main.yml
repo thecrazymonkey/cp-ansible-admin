@@ -9,9 +9,9 @@
   include_tasks: quota_add.yml
   when: 
     - quotas_to_add|length > 0
-
+    - not ansible_check_mode
 - name: Delete Quotas
   include_tasks: quota_delete.yml
   when: 
-    - quotas_configs_delete|length > 0
-
+    - quotas_to_delete|length > 0
+    - not ansible_check_mode

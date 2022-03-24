@@ -1,5 +1,5 @@
 ---
-# build a configuration structure from current state of topics/configs in the cluster
+# build a configuration structure from current state of rolebindings in the cluster
 - set_fact:
     scope: "{{ { 'clusterName' : cluster_name } }}"
     rbac_list: []
@@ -8,6 +8,7 @@
 
 - debug:
     msg="{{scope}}"
+    verbosity=3
 
 - name: Get Roles List
   uri:
@@ -23,6 +24,7 @@
   check_mode: no
 - debug:
     msg="{{roles_list.json}}"
+    verbosity=3
 
 - name: Get Principals For Roles List
   uri:
@@ -46,6 +48,7 @@
   loop: "{{ principals_list_tmp.results | d([]) | subelements('json') }}"
 - debug:
     msg="{{principals_list}}"
+    verbosity=3
   
 
 - name: Get Resources For Principal And Role
@@ -82,3 +85,4 @@
 
 - debug:
    var: rbac_current
+   verbosity: 3

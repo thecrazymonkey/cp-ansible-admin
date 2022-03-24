@@ -1,15 +1,17 @@
 ---
 
 # PK - server+principal and find all Admin deltas
-- name: Delta Inputs
-  block:
-    - debug:
-        msg="Current state>{{ rbac_current }}"
-    - debug:
-        msg="Desired state>{{ rolebindings }}"  
-    - set_fact: 
-       rbac_current_pk: []
-       rolebindings_pk: []
+- debug:
+    msg="Current state>{{ rbac_current }}"
+    verbosity=3
+- debug:
+    msg="Desired state>{{ rolebindings }}"  
+    verbosity=3
+
+- name: Initialize Variables
+  set_fact: 
+    rbac_current_pk: []
+    rolebindings_pk: []
 
 - name: Add PKs current
   set_fact: 
@@ -74,16 +76,18 @@
     rbac_in: "{{ item_rbac.1.0 }}"
     rbac_state: "{{ item_rbac.1.1 }}"   
 
-- name: Print lists  
-  block:
-    - debug:
-       var: rbac_to_add 
-    - debug:
-       var: rbac_to_delete
-    - debug:
-       var: resources_to_add
-    - debug:
-       var: resources_to_delete
+- debug:
+    var: rbac_to_add 
+    verbosity: 3
+- debug:
+    var: rbac_to_delete
+    verbosity: 3
+- debug:
+    var: resources_to_add
+    verbosity: 3
+- debug:
+    var: resources_to_delete
+    verbosity: 3
 
 - name: Merge Lists
 # merge the add and delete lists       

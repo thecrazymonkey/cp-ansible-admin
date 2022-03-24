@@ -1,12 +1,11 @@
 ---
 # make out delta operation from the existing and intended topics setup
 # input topics_dump - current state; topics - desired state
-- name: Delta Inputs
-  block:
-    - debug:
-        msg="Current state>{{ topics_current }}"
-    - debug:
-        msg="Desired state>{{ topics }}"    
+- debug:
+    msg:
+      - "Current state>{{ topics_current }}"
+      - "Desired state>{{ topics }}"    
+    verbosity: 3
 
 - name: To add
 # check the topics to add, figure out the config updates later
@@ -25,11 +24,12 @@
 
 # initialize list with changes
 - name: Initialize Diffs
-  block:
-    - set_fact: 
-       topics_to_reconfigure: "{{topics | difference(topics_current) }}"
-    - debug:
-       msg="To reconfigure>{{ topics_to_reconfigure }}"    
+  set_fact: 
+    topics_to_reconfigure: "{{topics | difference(topics_current) }}"
+
+- debug:
+    msg="To reconfigure>{{ topics_to_reconfigure }}"  
+    verbosity=3  
 
 - name: To reconfigure partitions
 # check reconfiguration required - only for topics we are not deleting
@@ -52,13 +52,15 @@
     topic_in: "{{ item_topic.1.0 }}"
     topic_state: "{{ item_topic.1.1 }}"   
 
-- name: Print lists  
-  block:
-    - debug:
-       var: topics_to_add
-    - debug:
-       var: topics_to_delete
-    - debug:
-       var: topics_to_reconfigure_part
-    - debug:
-       var: topics_to_reconfigure_configs
+- debug:
+    var: topics_to_add
+    verbosity: 3
+- debug:
+    var: topics_to_delete
+    verbosity: 3
+- debug:
+    var: topics_to_reconfigure_part
+    verbosity: 3
+- debug:
+    var: topics_to_reconfigure_configs
+    verbosity: 3

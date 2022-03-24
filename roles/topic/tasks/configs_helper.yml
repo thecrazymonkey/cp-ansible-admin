@@ -14,6 +14,7 @@
       when: item.name not in (configs_in | items2dict(key_name='name'))
     - debug:
         msg="Config delete>{{ configs_to_delete|d([]) }}"
+        verbosity=3
     - set_fact:
         topics_to_reconfigure_configs: "{{topics_to_reconfigure_configs + [topic_in | combine({ 'configs' : (configs_to_delete| d(topic_in.configs))} )]}}"        
     # - debug:
