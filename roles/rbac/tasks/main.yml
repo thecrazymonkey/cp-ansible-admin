@@ -1,4 +1,6 @@
 ---
+- name: Get Roles
+  include_tasks: rbac_roles.yml
 
 - name: Dump Scopes
   include_tasks: rbac_scopes.yml

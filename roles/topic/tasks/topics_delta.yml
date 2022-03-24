@@ -54,13 +54,13 @@
 
 - debug:
     var: topics_to_add
-    verbosity: 3
+    verbosity: 2
 - debug:
     var: topics_to_delete
-    verbosity: 3
+    verbosity: 2
 - debug:
     var: topics_to_reconfigure_part
-    verbosity: 3
+    verbosity: 2
 - debug:
     var: topics_to_reconfigure_configs
-    verbosity: 3
+    verbosity: 2

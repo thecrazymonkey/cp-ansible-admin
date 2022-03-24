@@ -16,7 +16,7 @@
   # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
   until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
   changed_when: "quotas_result.rc == 0"
-  loop: "{{quotas_configs_delete}}"
+  loop: "{{quotas_to_delete}}"
 
 - debug:
     var: item.stdout|d("")

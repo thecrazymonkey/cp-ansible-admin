@@ -6,6 +6,7 @@ mds_server_url: https://kafka1.confluent.io:8090
 rolebindings: []
 
 rbac_current: [] 
+# set whitelist as a regex expression e.g. "cluster1|cluster2|cluster3"
 rbac_cluster_whitelist: ""
 rbac_dump_file: false
 rbac_dump_destination: /tmp/rbac_dump_out.yml
