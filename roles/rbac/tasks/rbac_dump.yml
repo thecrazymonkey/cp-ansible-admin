@@ -71,11 +71,19 @@
     rbac_list: '{{ rbac_list +  [ { "tmppk": item.0.item.principal+item.0.item.role, "principal": item.0.item.principal, "role": item.0.item.role, "clusterName" : cluster_name, "resources" : [item.1] }] }}'
   loop: "{{ resources_list_tmp.results | subelements('json') }}"
 
-# combine all  
-- name: Combine Resources Into Single List
+# combine all - 2.10+ 
+# - name: Combine Resources Into Single List
+#   set_fact:
+#     rbac_current: "{{ rbac_current + [item.1|combine(list_merge='append')] }}"
+#   loop: "{{ rbac_list|groupby('tmppk') }}"
+
+- name: Combine Resources Into Single List 
+# to support 2.9
   set_fact:
-    rbac_current: "{{ rbac_current + [item.1|combine(list_merge='append')] }}"
+    rbac_current: "{{ rbac_current|d([]) + [item.1|combine({'resources':_resources})] }}"
   loop: "{{ rbac_list|groupby('tmppk') }}"
+  vars:
+    _resources: "{{ item.1|map(attribute='resources')|flatten }}"
 
 - name: Add Admins
   set_fact: 
