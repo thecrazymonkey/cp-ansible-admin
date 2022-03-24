@@ -17,6 +17,15 @@ all:
 # path to binaries    
     binary_base_path: /home/confluent/confluent-7.0.1    
 
+    # topics delete is disabled by default
+    topic_delete_enabled: false
+    # partitions management disabled by default
+    topic_partitions_enabled: false
+    # prefix when embedded proxy is used
+    topic_cluster_prefix: "/kafka"
+    # list regex representing all topics you want to be left alone
+    topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
+
 # sample desired topics state structure      
     topics:
 # here is config change - value change and value delete    
@@ -143,6 +152,13 @@ all:
       clusterName: test-cluster
       principal: User:bob
       role: SystemAdmin
+# define accounts protected from management    
+    rbac_protected_accounts: "User:superUser"
+# regex for clusters managed with this playbook
+    rbac_cluster_whitelist: ""
+# if you want current state dumped to a file enable the following and set the file path    
+    rbac_dump_file: false
+    rbac_dump_destination: /tmp/rbac_dump_out.yml    
 
 # quotas management connectivity defined above
 # sample desired quotas state structure

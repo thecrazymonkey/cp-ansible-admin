@@ -1,6 +1,6 @@
 ---
 - debug:
-    var: quotas_configs_delete
+    var: quotas_to_delete
     verbosity: 3
 
 # Low level quota operations - using Admin API

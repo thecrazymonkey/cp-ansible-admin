@@ -34,6 +34,7 @@
     http_method: POST
   when: 
     - rbac_to_add|length > 0
+    - not ansible_check_mode
 
 - name: Delete Rolebindings 
   include_tasks: rbac_crud.yml
@@ -42,4 +43,5 @@
     http_method: DELETE
   when: 
     - rbac_to_delete|length > 0
+    - not ansible_check_mode
 

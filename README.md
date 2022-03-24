@@ -12,7 +12,7 @@ RBAC - works only with clusters registered in the Cluster Registry (too lazy to 
 
 Quotas - only via kafka-configs; again REST API support is not yet available
 
-TODO - testing, better readme, debug output cleanup, possibly renaming this project, updating once the REST API availability is there for the missing features
+TODO - testing, better readme, updating once the REST API availability is there for the missing features
+TODO - add RBAC principal blacklist (protected accounts) and whitelist
 
-Requires Ansible 2.10+ for RBAC
-Requires Ansible 2.9+ for topics and quotas
+Works with Ansible 2.9+ 

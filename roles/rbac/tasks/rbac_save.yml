@@ -11,9 +11,10 @@
         myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
     - name: Dump To A File
       local_action: copy content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{rbac_dump_destination}}"
+      check_mode: no
       vars:
         to_dump: "{{ {'rolebindings': rbac_mapped} }}"    
+      no_log: False
   when: 
     - rbac_dump_file
-    - not ansible_check_mode
 
