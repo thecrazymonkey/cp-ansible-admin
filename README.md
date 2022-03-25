@@ -14,5 +14,6 @@ Quotas - only via kafka-configs; again REST API support is not yet available
 
 TODO - testing, better readme, updating once the REST API availability is there for the missing features
 TODO - add RBAC principal blacklist (protected accounts) and whitelist
+TODO - extend quota management to principals
 
 Works with Ansible 2.9+ 
