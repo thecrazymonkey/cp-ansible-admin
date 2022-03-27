@@ -2,16 +2,21 @@
 # make out delta operation from the existing and intended quotas setup
 # input quotas_current - current state; quotas - desired state
 - debug:
-    msg="Current state>{{ quotas_current }}"
-    verbosity=3
+    msg:
+      = "{{entity}}"
+      - "Current state>{{ quotas_current[entity]|d([]) }}"
+    verbosity: 3
 - debug:
-    msg="Desired state>{{ quotas }}"   
-    verbosity=3
+    msg: 
+      - "Desired state>{{ quotas[entity]|d([]) }}"   
+    verbosity: 3
 
 - name: Initialize Variables         
   set_fact:
-    quotas_to_add: []
-    quotas_to_delete: []
+    quotas_to_add_entity: []
+    quotas_to_delete_entity: []
+    quotas_entity: "{{ quotas[entity]|d([]) }}"   
+    quotas_current_entity: "{{ quotas_current[entity]|d([]) }}"   
 
 - name: To add
 # check the quotas to add, figure out the key additions and value updates 
@@ -20,8 +25,8 @@
   #   - "{{item}}"
   #   - "{{diff_keys}}"
   set_fact:
-    quotas_to_add: "{{ quotas_to_add+[item.0]}}"
-  loop: "{{ (quotas_to_reconfigure_raw + quotas_current) | groupby('client_id')}}"    
+    quotas_to_add_entity: "{{ quotas_to_add_entity+[item.0]}}"
+  loop: "{{ (quotas_to_reconfigure_raw + quotas_current_entity) | groupby(entity)}}"    
   vars:
      skeys: "{{ item.1.0.keys()|d([])|list }}"
      tem: "{{ item.1.1 | d({})}}"
@@ -31,29 +36,33 @@
      temv: "{{ item.1.1 | d({})}}"
      tvals: "{{ tem.values()| d([])|list }}"
      diff_vals: "{{ svals|difference(tvals) }}"
-     quotas_to_reconfigure_raw: "{{quotas | difference(quotas_current) }}"
-     to_add_list: "{{quotas | map(attribute='client_id') | difference(quotas_current | map(attribute='client_id')) | list}}"
+     quotas_to_reconfigure_raw: "{{quotas_entity | difference(quotas_current_entity) }}"
+     to_add_list: "{{quotas_entity | map(attribute=entity) | difference(quotas_current_entity | map(attribute=entity)) | list}}"
   when: item.0 in to_add_list or tem and (diff_keys|length != 0 or diff_vals|length !=0)     
 
 
 - name: To delete quotas
     # check the quotas for removals, the rest can be processed as is 
   set_fact:
-    quotas_to_delete: "{{ quotas_to_delete|d([])+[{'client_id': item.0, 'delete': diff_keys|difference(['client_id'])}]}}"
+    quotas_to_delete_entity: "{{ quotas_to_delete_entity|d([])+[{entity: item.0, 'delete': diff_keys|difference([entity])}]}}"
   # debug:
   #   msg:
   #   - "{{item}}"
   #   - "{{diff_keys}}"
-  loop: "{{ (quotas_to_reconfigure_raw + quotas_current) | groupby('client_id')}}"    
+  loop: "{{ (quotas_to_reconfigure_raw + quotas_current_entity) | groupby(entity)}}"    
   vars:
      skeys: "{{ item.1.0.keys()|d([])|list }}"
      tem: "{{ item.1.1 | d({})}}"
      tkeys: "{{ tem.keys()| d([])|list }}"
      diff_keys: "{{ skeys|difference(tkeys) if item.0 in to_delete_list else tkeys|difference(skeys) }}"
-     quotas_to_reconfigure_raw: "{{quotas | difference(quotas_current) }}"
-     to_delete_list: "{{quotas_current | map(attribute='client_id') | difference(quotas | map(attribute='client_id')) | list}}"
-  when: item.1.0.client_id not in quotas_to_add and diff_keys|length != 0     
+     quotas_to_reconfigure_raw: "{{quotas_entity | difference(quotas_current_entity) }}"
+     to_delete_list: "{{quotas_current_entity | map(attribute=entity) | difference(quotas_entity | map(attribute=entity)) | list}}"
+  when: item.0 not in quotas_to_add_entity and diff_keys|length != 0     
 
+- name: Merge Lists
+  set_fact:
+    quotas_to_add: "{{ quotas_to_add | combine({entity: quotas_to_add_entity}) }}"
+    quotas_to_delete: "{{ quotas_to_delete | combine({entity: quotas_to_delete_entity}) }}"
 - debug:
     var: quotas_to_add
     verbosity: 2

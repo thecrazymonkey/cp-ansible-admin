@@ -1,9 +1,9 @@
 ---
 # compose into useable structure
-# - debug:
-#     msg="{{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace('client_id=[0-9a-zA-Z_.-]{1,},')}}"
-#   loop: "{{quotas}}"
-#   when: item.client_id in quotas_to_add
+- debug:
+    msg="{{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace(entity+'=[0-9a-zA-Z_.-]{1,},')}}"
+  loop: "{{quotas[entity]}}"
+  when: item[entity] in quotas_to_add[entity]
 
 
 # Low level quota operations - using Admin API
@@ -11,16 +11,16 @@
 # not supported via REST API yet - needs direct call to Kafka Admin API
   shell: |
     {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
-      --alter --add-config {{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace('client_id=[0-9a-zA-Z_.-]{1,},')}} \
-      --entity-type clients --entity-name {{item.client_id}} --command-config {{kafka_broker_client_config_file}}
+      --alter --add-config {{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace(entity+'=[0-9a-zA-Z_.-]{1,},')}} \
+      --entity-type {{entity}} --entity-name {{item[entity]}} --command-config {{kafka_broker_client_config_file}}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: quotas_result
   # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
   until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
   changed_when: "quotas_result.rc == 0"
-  loop: "{{quotas}}"
-  when: item.client_id in quotas_to_add
+  loop: "{{quotas[entity]}}"
+  when: item[entity] in quotas_to_add[entity]
 
 - debug:
     var: item.stdout|d("")

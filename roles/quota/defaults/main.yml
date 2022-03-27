@@ -2,3 +2,6 @@
 # structure to hold desired state for quotas
 quotas: []
 quotas_current: []
+quotas_to_add: []
+quotas_to_delete: []
+

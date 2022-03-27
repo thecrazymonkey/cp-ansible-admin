@@ -4,7 +4,7 @@
 # not supported via REST API yet - needs direct call to Kafka Admin API
   shell: |
     {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
-      --describe --entity-type clients --command-config {{kafka_broker_client_config_file}}
+      --describe --entity-type {{entity}} --command-config {{kafka_broker_client_config_file}}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: quotas_result
@@ -20,14 +20,21 @@
 
 # parse into useable structure
 - set_fact:
-    quotas_current: "{{quotas_current | d([]) + [{'client_id': client_id, 'producer_byte_rate': client_produce[0]|float if client_produce[0] is defined else omit, 'consumer_byte_rate': client_consume[0]|float if client_consume[0] is defined else omit, 'request_percentage': client_request[0]|float if client_request[0] is defined else omit}] }}"
+    quotas_current_tmp: []
+- set_fact:
+    quotas_current_tmp: "{{quotas_current_tmp | d([]) + [{ (entity == 'clients') | ternary('clients','users'): _id, 
+                    'producer_byte_rate': _produce[0]|float if _produce[0] is defined else omit, 
+                    'consumer_byte_rate': _consume[0]|float if _consume[0] is defined else omit, 
+                    'request_percentage': _request[0]|float if _request[0] is defined else omit}] }}"
   loop: "{{quotas_result.stdout_lines}}"
   vars:
-    client_produce: "{{ item | regex_search('.*producer_byte_rate=([0-9.]{0,}).*', '\\1') }}"
-    client_consume: "{{ item | regex_search('.*consumer_byte_rate=([0-9.]{0,}).*', '\\1') }}"
-    client_request: "{{ item | regex_search('.*request_percentage=([0-9.]{0,}).*', '\\1') }}"
-    client_id: >-
+    _produce: "{{ item | regex_search('.*producer_byte_rate=([0-9.]{0,}).*', '\\1') }}"
+    _consume: "{{ item | regex_search('.*consumer_byte_rate=([0-9.]{0,}).*', '\\1') }}"
+    _request: "{{ item | regex_search('.*request_percentage=([0-9.]{0,}).*', '\\1') }}"
+    _id: >-
       {{ item | regex_replace(".*\'([a-zA-Z0-9_.-]{1,})\'.*",'\1') }}
+- set_fact:
+    quotas_current: "{{ quotas_current| combine({entity: quotas_current_tmp}) }}"   
 
 - debug:
     msg="{{quotas_current}}"
