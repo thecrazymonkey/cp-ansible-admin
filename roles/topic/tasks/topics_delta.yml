@@ -36,7 +36,7 @@
   set_fact:
     topics_to_reconfigure_part: "{{ topics_to_reconfigure_part + [{'topic_name': item.1.0.topic_name, 'partitions_count': item.1.0.partitions_count}] }}"
   loop: "{{ (topics_to_reconfigure + topics_current) | groupby('topic_name')}}"    
-  when: (item.1.0.partitions_count > (item.1.1.partitions_count|d(0))) and (item.1.1.partitions_count|d(0) > 0) and (item.1.0.topic_name not in topics_to_delete)
+  when: (item.1.0.topic_name not in topics_to_delete) and (item.1.0.partitions_count > (item.1.1.partitions_count|d(0))) and (item.1.1.partitions_count|d(0) > 0) 
 
 - name: To reconfigure configs
     # check the configs for changes 

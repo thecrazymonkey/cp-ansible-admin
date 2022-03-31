@@ -10,7 +10,7 @@
   register: quotas_result
   # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
   until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
-#  changed_when: "quotas_result.rc == 0"
+  changed_when: false
   check_mode: no
 
 - debug:
@@ -22,7 +22,7 @@
 - set_fact:
     quotas_current_tmp: []
 - set_fact:
-    quotas_current_tmp: "{{quotas_current_tmp | d([]) + [{ (entity == 'clients') | ternary('clients','users'): _id, 
+    quotas_current_tmp: "{{quotas_current_tmp | d([]) + [{ (entity == 'clients') | ternary('clients','users'): _id[0]|trim(\"'\"), 
                     'producer_byte_rate': _produce[0]|float if _produce[0] is defined else omit, 
                     'consumer_byte_rate': _consume[0]|float if _consume[0] is defined else omit, 
                     'request_percentage': _request[0]|float if _request[0] is defined else omit}] }}"
@@ -32,10 +32,66 @@
     _consume: "{{ item | regex_search('.*consumer_byte_rate=([0-9.]{0,}).*', '\\1') }}"
     _request: "{{ item | regex_search('.*request_percentage=([0-9.]{0,}).*', '\\1') }}"
     _id: >-
-      {{ item | regex_replace(".*\'([a-zA-Z0-9_.-]{1,})\'.*",'\1') }}
+      {{ item | regex_search(".*(\'[a-zA-Z0-9_.-]{1,}\'|default).*",'\1') }}
 - set_fact:
     quotas_current: "{{ quotas_current| combine({entity: quotas_current_tmp}) }}"   
 
 - debug:
     msg="{{quotas_current}}"
     verbosity=3
+
+# - name: List quotas combined
+#   block:
+#   # not supported via REST API yet - needs direct call to Kafka Admin API
+#   - shell: |
+#       {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
+#         --describe --entity-type {{entity}} --entity-type clients --command-config {{kafka_broker_client_config_file}}
+#     environment:
+#       CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
+#     register: quotas_result
+#     # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
+#     until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
+#     changed_when: false
+#     check_mode: no
+#     when: entity == 'users'
+
+#   - debug:
+#       msg="{{item}}"
+#       verbosity=3
+#     loop: "{{quotas_result.stdout_lines}}"
+
+#   - set_fact:
+#       quotas_current_tmp: []
+#       quotas_current_tmp2: []
+
+#   - set_fact:
+#       quotas_current_tmp: "{{quotas_current_tmp | d([]) + [{'users': _id[0]|trim(\"'\"), 'clients': [{ 'clients': _client_id[0]|d('default')|trim(\"'\"), 
+#                       'producer_byte_rate': _produce[0]|float if _produce[0] is defined else omit, 
+#                       'consumer_byte_rate': _consume[0]|float if _consume[0] is defined else omit, 
+#                       'request_percentage': _request[0]|float if _request[0] is defined else omit}]}] }}"
+#     loop: "{{quotas_result.stdout_lines}}"
+#     vars:
+#       _produce: "{{ item | regex_search('.*producer_byte_rate=([0-9.]{0,}).*', '\\1') }}"
+#       _consume: "{{ item | regex_search('.*consumer_byte_rate=([0-9.]{0,}).*', '\\1') }}"
+#       _request: "{{ item | regex_search('.*request_percentage=([0-9.]{0,}).*', '\\1') }}"
+#       _id: >-
+#         {{ item | regex_search(".*user-principal (\'[a-zA-Z0-9_.-]{1,}\').*",'\1') }}
+#       _client_id: >-
+#         {{ item | regex_search(".*client-id (\'[a-zA-Z0-9_.-]{1,}\').*",'\1') }}
+
+#   - set_fact:
+#       quotas_current_tmp2: "{{quotas_current_tmp2 | d([]) + [item.1|combine({'clients':_clients})] }}"
+#     loop: "{{quotas_current_tmp|groupby(entity)}}"
+#     vars:
+#       _clients: "{{ item.1 | map(attribute='clients')| flatten }}"
+
+#   - set_fact:
+#       quotas_current_tmp: "{{ quotas_current[entity]+quotas_current_tmp2 }}"   
+
+#   - set_fact:
+#       quotas_current: "{{ quotas_current| combine({entity: quotas_current_tmp}) }}"   
+
+#   - debug:
+#       msg="{{quotas_current}}"
+#       verbosity=3
+#   when: entity == 'users'

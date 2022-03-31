@@ -5,59 +5,131 @@
     msg:
       = "{{entity}}"
       - "Current state>{{ quotas_current[entity]|d([]) }}"
-    verbosity: 3
+#    verbosity: 3
 - debug:
     msg: 
       - "Desired state>{{ quotas[entity]|d([]) }}"   
-    verbosity: 3
+#    verbosity: 3
 
 - name: Initialize Variables         
   set_fact:
     quotas_to_add_entity: []
     quotas_to_delete_entity: []
+    quotas_clients_to_delete: []
     quotas_entity: "{{ quotas[entity]|d([]) }}"   
     quotas_current_entity: "{{ quotas_current[entity]|d([]) }}"   
 
-- name: To add
-# check the quotas to add, figure out the key additions and value updates 
+- name: To add detailed
+# check the quotas to add, figure out the key additions and value updates, only basic clients and users (clients sublists are separated)
   # debug:
   #   msg:
   #   - "{{item}}"
   #   - "{{diff_keys}}"
   set_fact:
-    quotas_to_add_entity: "{{ quotas_to_add_entity+[item.0]}}"
-  loop: "{{ (quotas_to_reconfigure_raw + quotas_current_entity) | groupby(entity)}}"    
+    quotas_to_add_entity: "{{ quotas_to_add_entity+[quota_desired]}}"
+  loop: "{{ (quotas_entity + quotas_current_entity) | groupby(entity)}}"    
   vars:
-     skeys: "{{ item.1.0.keys()|d([])|list }}"
-     tem: "{{ item.1.1 | d({})}}"
+     quota_desired: "{{item.1|first}}"
+     quota_state: "{{item.1.1 if item.1.1 is defined else {}}}"
+     skeys: "{{ quota_desired.keys()|d([])|list }}"
+     tem: "{{ quota_state | d({})}}"
      tkeys: "{{ tem.keys()| d([])|list }}"
      diff_keys: "{{ skeys|difference(tkeys) }}"
      svals: "{{ item.1.0.values()|d([])|list }}"
      temv: "{{ item.1.1 | d({})}}"
      tvals: "{{ tem.values()| d([])|list }}"
      diff_vals: "{{ svals|difference(tvals) }}"
-     quotas_to_reconfigure_raw: "{{quotas_entity | difference(quotas_current_entity) }}"
      to_add_list: "{{quotas_entity | map(attribute=entity) | difference(quotas_current_entity | map(attribute=entity)) | list}}"
-  when: item.0 in to_add_list or tem and (diff_keys|length != 0 or diff_vals|length !=0)     
+  when: item.0 in to_add_list or tem and (diff_keys|length != 0 or diff_vals|length !=0) and (entity != 'users' or 'clients' not in quota_desired)
 
+# - name: To delete quotas print
+#     # check the quotas for removals, the rest can be processed as is (clients sub list for users is processed separately) 
+#   # set_fact:
+#   #   quotas_to_delete_entity: "{{ quotas_to_delete_entity|d([])+[{entity: item.0, 'delete': diff_keys|difference([entity])}]}}"
+#   debug:
+#     msg:
+#     - "{{item}}"
+#     - "{{diff_keys}}"
+#     - "{{to_delete_list}}"
+#     - "{{quota_desired}}"
+#     - "{{quota_state}}"
+#     - "{{skeys}}"
+#     - "{{tkeys}}"
+#   loop: "{{ (quotas_entity + quotas_current_entity) | groupby(entity)}}"    
+#   vars:
+#      quota_desired: "{{item.1.0}}"
+#      quota_state: "{{item.1.1 if item.1.1 is defined else {}}}"
+#      skeys: "{{ quota_desired.keys()|d([])|list }}"
+#      tem: "{{ quota_state | d({})}}"
+#      tkeys: "{{ tem.keys()| d([])|list }}"
+#      diff_keys: "{{ skeys|difference(tkeys) if item.0 in to_delete_list else tkeys|difference(skeys) }}"
+#      to_delete_list: "{{quotas_current_entity | map(attribute=entity) | difference(quotas_entity | map(attribute=entity)) | list}}"
+#   # skipping processing of combined user/clients quotas for later
+#   when: item.0 not in quotas_to_add_entity and (diff_keys|length != 0 or item.0 in to_delete_list) and (entity != 'users' or 'clients' not in item.1.0)
 
 - name: To delete quotas
-    # check the quotas for removals, the rest can be processed as is 
+    # check the quotas for removals, the rest can be processed as is (clients sub list for users is processed separately) 
   set_fact:
     quotas_to_delete_entity: "{{ quotas_to_delete_entity|d([])+[{entity: item.0, 'delete': diff_keys|difference([entity])}]}}"
   # debug:
   #   msg:
   #   - "{{item}}"
   #   - "{{diff_keys}}"
-  loop: "{{ (quotas_to_reconfigure_raw + quotas_current_entity) | groupby(entity)}}"    
+  loop: "{{ (quotas_entity + quotas_current_entity) | groupby(entity)}}"    
   vars:
-     skeys: "{{ item.1.0.keys()|d([])|list }}"
-     tem: "{{ item.1.1 | d({})}}"
+     quota_desired: "{{item.1|first}}"
+     quota_state: "{{item.1.1 if item.1.1 is defined else {}}}"
+     skeys: "{{ quota_desired.keys()|d([])|list }}"
+     tem: "{{ quota_state | d({})}}"
      tkeys: "{{ tem.keys()| d([])|list }}"
      diff_keys: "{{ skeys|difference(tkeys) if item.0 in to_delete_list else tkeys|difference(skeys) }}"
-     quotas_to_reconfigure_raw: "{{quotas_entity | difference(quotas_current_entity) }}"
      to_delete_list: "{{quotas_current_entity | map(attribute=entity) | difference(quotas_entity | map(attribute=entity)) | list}}"
-  when: item.0 not in quotas_to_add_entity and diff_keys|length != 0     
+  # skipping processing of combined user/clients quotas for later
+  when: item.0 not in quotas_to_add_entity and (diff_keys|length != 0 or item.0 in to_delete_list) and (entity != 'users' or 'clients' not in item.1.0)
+
+# - name: Process clients quotas test
+#   # check the user quotas for client specific entries
+#   debug:
+#     msg:
+#     - "Quota1 {{item_quota}}"
+#     - "Quota2 {{item_quota|length}}"
+#     - "Quota3 {{item_quota.1}}"
+#     - "1.1 {{item_quota.1|first}}"
+#     - "1.0 {{item_quota.1|last}}"
+# #    - "To reconfigure_raw {{quotas_to_reconfigure_raw}}"
+#     - "Test {{_test}}"
+#   loop: "{{ (quotas_entity + quotas_current_entity) | groupby(entity)}}"    
+#   vars:
+# #     quotas_to_reconfigure_raw: "{{quotas_entity | difference(quotas_current_entity) }}"
+#      quota_desired: "{{item_quota.1|first}}"
+#      quota_state: "{{item_quota.1|last}}"
+#      _test: "{{ (quota_desired.clients if quota_desired.clients is defined else [] | symmetric_difference(quota_state.clients if quota_state.clients is defined else [])) | length > 0}}"
+#     #  to_add_list: "{{quotas_entity | map(attribute=entity) | difference(quotas_current_entity | map(attribute=entity)) | difference(quotas_to_add_entity) | list}}"
+#     #  to_delete_list: "{{quotas_current_entity | map(attribute=entity) | difference(quotas_entity | map(attribute=entity)) | difference(quotas_to_delete_entity) | list}}"
+#   when: entity == 'users' and _test 
+#   loop_control:
+#     loop_var: item_quota
+
+# - name: Process clients quotas
+#   # check the user quotas for client specific entries
+#   ansible.builtin.include_tasks: quota_helper.yml
+#   # debug:
+#   #   msg:
+#   #   - "{{item_quota}}"
+#   #   - "{{item_quota.1.1}}"
+#   #   - "{{item_quota.1.0.clients}}"
+#   #   - "{{item_quota.1.1.clients}}"
+#   loop: "{{ (quotas_entity + quotas_current_entity) | groupby(entity)}}"    
+#   vars:
+#      quota_desired: "{{item_quota.1|first}}"
+#      quota_state: "{{item_quota.1.1 if item_quota.1.1 is defined else {}}}"
+#      _test_clients: "{{ (quota_desired.clients if quota_desired.clients is defined else [] | symmetric_difference(quota_state.clients if quota_state.clients is defined else [])) | length > 0}}"
+#      _test: "{{quota_desired not in quotas_current_entity}}"
+#      to_add_list: "{{quotas_to_add_entity | map(attribute=entity) | list}}"
+#      to_delete_list: "{{quotas_current_entity | map(attribute=entity) | difference(quotas_entity | map(attribute=entity)) | list}}"
+#   when: entity == 'users' and (_test or _test_clients) and item_quota|first not in quotas_to_add_entity
+#   loop_control:
+#     loop_var: item_quota
 
 - name: Merge Lists
   set_fact:

@@ -1,0 +1,12 @@
+---
+- name: Write to a file  
+  block:
+    - name: Dump To A File
+      local_action: copy content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{quotas_dump_destination}}"
+      check_mode: no
+      vars:
+        to_dump: "{{ {'quotas': quotas_current} }}"    
+      no_log: False
+  when: 
+    - quotas_dump_file
+

@@ -9,6 +9,11 @@
   vars:
     entity: "{{ item_entity }}"
 
+- name: Save Quotas 
+  include_tasks: quota_save.yml
+  when:
+    - quotas_current|length > 0
+
 - name: Delta Quotas
   include_tasks: quota_delta.yml
   loop: 

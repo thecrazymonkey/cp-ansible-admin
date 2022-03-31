@@ -9,7 +9,7 @@
   shell: |
     {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
       --alter --delete-config {{item.delete|join(',')}} \
-      --entity-type {{entity}} --entity-name {{item[entity]}} --command-config {{kafka_broker_client_config_file}}
+      --entity-type {{entity}} {{ '--entity-default' if item[entity]=='default' else '--entity-name '+ item[entity] }} --command-config {{kafka_broker_client_config_file}}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: quotas_result

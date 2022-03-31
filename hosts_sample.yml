@@ -25,6 +25,9 @@ all:
     topic_cluster_prefix: "/kafka"
     # list regex representing all topics you want to be left alone
     topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
+# if you want current state dumped to a file enable the following and set the file path    
+    topic_dump_file: false
+    topic_dump_destination: /tmp/topic_dump_out.yml    
 
 # sample desired topics state structure      
     topics:
@@ -160,21 +163,26 @@ all:
     rbac_dump_file: false
     rbac_dump_destination: /tmp/rbac_dump_out.yml    
 
+# if you want current state dumped to a file enable the following and set the file path    
+    quotas_dump_file: true
+    quotas_dump_destination: /tmp/quotas_dump_out.yml    
+
 # quotas management connectivity defined above
 # sample desired quotas state structure
     quotas:
-      - client_id: test
-        consumer_byte_rate: 100002.0
-        producer_byte_rate: 100001.0
-        # request_percentage: 30.0
-      # - client_id: test2
-      #   consumer_byte_rate: 100002.0
-      #   producer_byte_rate: 100001.0
-      - client_id: test3
-        consumer_byte_rate: 100003.0
-        producer_byte_rate: 100003.0
-        request_percentage: 20.0
-      - client_id: test4
-        consumer_byte_rate: 100004.0
-        producer_byte_rate: 100004.0
-        request_percentage: 20.0
+      clients:  
+        - clients: test
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          # request_percentage: 30.0
+        # - client_id: test2
+        #   consumer_byte_rate: 100002.0
+        #   producer_byte_rate: 100001.0
+        - clients: test3
+          consumer_byte_rate: 100003.0
+          producer_byte_rate: 100003.0
+          request_percentage: 20.0
+        - clients: test4
+          consumer_byte_rate: 100004.0
+          producer_byte_rate: 100004.0
+          request_percentage: 20.0

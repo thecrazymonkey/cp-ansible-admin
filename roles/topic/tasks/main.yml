@@ -2,6 +2,10 @@
 - name: Dump topics 
   include_tasks: topics_dump.yml
 
+- name: Save Topics
+  include_tasks: topics_save.yml
+  when: topics_current|length > 0
+
 - name: Delta topics 
   include_tasks: topics_delta.yml
 

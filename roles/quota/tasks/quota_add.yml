@@ -1,9 +1,12 @@
 ---
 # compose into useable structure
 - debug:
-    msg="{{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace(entity+'=[0-9a-zA-Z_.-]{1,},')}}"
-  loop: "{{quotas[entity]}}"
-  when: item[entity] in quotas_to_add[entity]
+    msg:
+      - "{{item}}"
+      # - "{{item.clients is defined}}"
+      # - "{{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace(entity+'=[0-9a-zA-Z_.-]{1,},')}}"
+  loop: "{{quotas_to_add[entity]}}"
+  when: entity != 'users' or 'clients' not in item
 
 
 # Low level quota operations - using Admin API
@@ -12,18 +15,26 @@
   shell: |
     {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
       --alter --add-config {{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace(entity+'=[0-9a-zA-Z_.-]{1,},')}} \
-      --entity-type {{entity}} --entity-name {{item[entity]}} --command-config {{kafka_broker_client_config_file}}
+      --entity-type {{entity}} {{ '--entity-default' if item[entity]=='default' else '--entity-name '+ item[entity] }} --command-config {{kafka_broker_client_config_file}}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: quotas_result
   # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
   until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
   changed_when: "quotas_result.rc == 0"
-  loop: "{{quotas[entity]}}"
-  when: item[entity] in quotas_to_add[entity]
+  loop: "{{quotas_to_add[entity]}}"
+  when: entity != 'users' or 'clients' not in item
 
-- debug:
-    var: item.stdout|d("")
-    verbosity: 3
-  loop: "{{quotas_result.results}}"
+# - name: Add Quotas For Users And Clients
+#   include_tasks: quota_add_users_clients.yml
+#   loop: "{{quotas_to_add[entity]}}"
+#   loop_control:
+#     loop_var: item_clients
+#   vars:
+#     quota: "{{ item_clients }}"
+#   when: entity == 'users' and 'clients' in item_clients
+# - debug:
+#     var: item.stdout|d("")
+#     verbosity: 3
+#   loop: "{{quotas_result.results}}"
 
