@@ -17,7 +17,7 @@
           - "Clients state  >{{clients_state}}"
           - "Add list     >{{to_add_list}}"
           - "Delete list  >{{to_delete_list}}"
-        verbosity: 3
+        verbosity: 2
     
     - name: To Add Clients/Users
       # if any condition is met just add everything for the specific user
