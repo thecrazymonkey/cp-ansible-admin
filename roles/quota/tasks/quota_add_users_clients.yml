@@ -1,0 +1,29 @@
+---
+# compose into useable structure
+- debug:
+    msg:
+      - "{{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace('clients'+'=[0-9a-zA-Z_.-]{1,},')}}"
+  loop: "{{quota.clients}}"
+
+
+# Low level quota operations - using Admin API
+- name: Add quotas
+# not supported via REST API yet - needs direct call to Kafka Admin API
+  shell: |
+    {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
+      --alter --add-config {{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace('clients'+'=[0-9a-zA-Z_.-]{1,},')}} \
+      --entity-type users {{ '--entity-default' if quota.users=='default' else '--entity-name '+ quota.users }} \
+      --entity-type clients {{ '--entity-default' if item.clients=='default' else '--entity-name '+ item.clients }} --command-config {{kafka_broker_client_config_file}}
+  environment:
+    CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
+  register: quotas_result
+  # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
+  until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
+  changed_when: "quotas_result.rc == 0"
+  loop: "{{quota.clients}}"
+
+- debug:
+    var: item.stdout|d("")
+    verbosity: 3
+  loop: "{{quotas_result.results}}"
+

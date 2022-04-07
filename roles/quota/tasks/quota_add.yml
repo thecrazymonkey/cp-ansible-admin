@@ -4,17 +4,15 @@
     msg:
       - "{{item}}"
       # - "{{item.clients is defined}}"
-      # - "{{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace(entity+'=[0-9a-zA-Z_.-]{1,},')}}"
+      - "{{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace(entity+'=[0-9a-zA-Z_.-]{1,},')|regex_replace(',clients=.*')}}"
   loop: "{{quotas_to_add[entity]}}"
-  when: entity != 'users' or 'clients' not in item
-
 
 # Low level quota operations - using Admin API
 - name: Add quotas
 # not supported via REST API yet - needs direct call to Kafka Admin API
   shell: |
     {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
-      --alter --add-config {{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace(entity+'=[0-9a-zA-Z_.-]{1,},')}} \
+      --alter --add-config {{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace(entity+'=[0-9a-zA-Z_.-]{1,},')|regex_replace(',clients=.*')}} \
       --entity-type {{entity}} {{ '--entity-default' if item[entity]=='default' else '--entity-name '+ item[entity] }} --command-config {{kafka_broker_client_config_file}}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
@@ -25,16 +23,18 @@
   loop: "{{quotas_to_add[entity]}}"
   when: entity != 'users' or 'clients' not in item
 
-# - name: Add Quotas For Users And Clients
-#   include_tasks: quota_add_users_clients.yml
-#   loop: "{{quotas_to_add[entity]}}"
-#   loop_control:
-#     loop_var: item_clients
-#   vars:
-#     quota: "{{ item_clients }}"
-#   when: entity == 'users' and 'clients' in item_clients
-# - debug:
-#     var: item.stdout|d("")
-#     verbosity: 3
-#   loop: "{{quotas_result.results}}"
+- debug:
+    var: item.stdout|d("")
+    verbosity: 3
+  loop: "{{quotas_result.results}}"
+  when: entity != 'users' or 'clients' not in item
+
+- name: Add Quotas For Users And Clients
+  include_tasks: quota_add_users_clients.yml
+  loop: "{{quotas_to_add[entity]}}"
+  loop_control:
+    loop_var: item_clients
+  vars:
+    quota: "{{ item_clients }}"
+  when: entity == 'users' and 'clients' in item_clients
 

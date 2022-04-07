@@ -1,0 +1,23 @@
+---
+- debug:
+    var: quotas_to_delete
+    verbosity: 3
+
+# Low level quota operations - using Admin API
+- name: Delete quotas
+# not supported via REST API yet - needs direct call to Kafka Admin API
+  shell: |
+    {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
+      --alter --delete-config {{quota.delete|join(',')}} \
+      --entity-type users {{ '--entity-default' if quota.users=='default' else '--entity-name '+ quota.users }} \
+      --entity-type clients {{ '--entity-default' if quota.clients=='default' else '--entity-name '+ quota.clients }} --command-config {{kafka_broker_client_config_file}}
+  environment:
+    CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
+  register: quotas_result
+  # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
+  until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
+  changed_when: "quotas_result.rc == 0"
+
+- debug:
+    var: quotas_result.stdout|d("")
+    verbosity: 3

@@ -17,9 +17,20 @@
   until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
   changed_when: "quotas_result.rc == 0"
   loop: "{{quotas_to_delete[entity]}}"
+  when: entity != 'users' or 'clients' not in item
 
 - debug:
     var: item.stdout|d("")
     verbosity: 3
   loop: "{{quotas_result.results}}"
+  when: entity != 'users' or 'clients' not in item
+
+- name: Delete Quotas For Users And Clients
+  include_tasks: quota_delete_users_clients.yml
+  loop: "{{quotas_to_delete[entity]}}"
+  loop_control:
+    loop_var: item_users
+  vars:
+    quota: "{{ item_users }}"
+  when: entity == 'users' and 'clients' in item_users
 
