@@ -8,14 +8,13 @@ Use Cases Supported:
     - Authentication using Basic Auth
     - requires all managed clusters to be registered in the Cluster Registry
 3. Quota Management for both new and existing clusters (after performing the initial dump of the current state)
-    - currently limited to the clients support only (proper users support is WIP)
     - 100% CLI implementation (REST API support not available in the Confluent REST API yet)
 
 All playbooks support dumping the initial state to a file by enabling the following variables (and their alternatives for quota and rbac management):
     topic_dump_file: true
     topic_dump_destination: /tmp/topic_dump_out.yml    
 
-All playbooks allow for evaluating the impact of the input changes using the Ansible check mode (verbosity level 2 gives the output structures)
+All playbooks allow for evaluating the impact of the input changes using the Ansible check mode (verbosity level 2 gives the output structures/build plans)
     ansible-playbook -i hosts_test.yml topics_management.yml --check -vv
 
 The execution of the playbooks after checking the execution plan 
@@ -180,4 +179,42 @@ Notable variables in the inventory (refer to the sample file)
           consumer_byte_rate: 100004.0
           producer_byte_rate: 100004.0
           request_percentage: 20.0
-
+        - clients: default
+          consumer_byte_rate: 100004.0
+          producer_byte_rate: 100004.0
+          request_percentage: 20.0
+      users:          
+        - users: test
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          request_percentage: 20.0
+        # - users: test2
+        #   consumer_byte_rate: 100002.0
+        #   producer_byte_rate: 100001.0
+        #   request_percentage: 22.0
+        - users: test3
+          consumer_byte_rate: 100003.0
+          producer_byte_rate: 100003.0
+          request_percentage: 23.0
+          clients:
+            - clients: test
+              consumer_byte_rate: 100001.0
+              producer_byte_rate: 100001.0
+              request_percentage: 21.0
+            - clients: test2
+              consumer_byte_rate: 100002.0
+              producer_byte_rate: 100002.0
+              request_percentage: 23.0
+            # - clients: test3
+            #   consumer_byte_rate: 100003.0
+            #   producer_byte_rate: 100003.0
+            #   request_percentage: 23.0
+        - users: default
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          request_percentage: 20.0
+          clients:
+            - clients: test
+              consumer_byte_rate: 100001.0
+              producer_byte_rate: 100001.0
+              request_percentage: 21.0

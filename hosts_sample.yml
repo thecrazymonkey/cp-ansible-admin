@@ -186,3 +186,42 @@ all:
           consumer_byte_rate: 100004.0
           producer_byte_rate: 100004.0
           request_percentage: 20.0
+        - clients: default
+          consumer_byte_rate: 100004.0
+          producer_byte_rate: 100004.0
+          request_percentage: 20.0
+      users:          
+        - users: test
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          request_percentage: 20.0
+        # - users: test2
+        #   consumer_byte_rate: 100002.0
+        #   producer_byte_rate: 100001.0
+        #   request_percentage: 22.0
+        - users: test3
+          consumer_byte_rate: 100003.0
+          producer_byte_rate: 100003.0
+          request_percentage: 23.0
+          clients:
+            - clients: test
+              consumer_byte_rate: 100001.0
+              producer_byte_rate: 100001.0
+              request_percentage: 21.0
+            - clients: test2
+              consumer_byte_rate: 100002.0
+              producer_byte_rate: 100002.0
+              request_percentage: 23.0
+            # - clients: test3
+            #   consumer_byte_rate: 100003.0
+            #   producer_byte_rate: 100003.0
+            #   request_percentage: 23.0
+        - users: default
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          request_percentage: 20.0
+          clients:
+            - clients: test
+              consumer_byte_rate: 100001.0
+              producer_byte_rate: 100001.0
+              request_percentage: 21.0

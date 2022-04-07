@@ -29,25 +29,28 @@
      myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
 
 - name: To Add
-# # check rolebindings to add
+# # check rolebindings to add, cleanup the pk
   set_fact: 
-    rbac_to_add: "{{rbac_to_add|d([]) + item.1 }}"
-  loop: "{{(rolebindings_pk + rbac_current_pk) | groupby('tmppk') }}"
+    rbac_to_add: '{{rbac_to_add|d([]) + [{ "principal": item.principal, "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
+  loop: "{{ rolebindings_pk }}"
   when: 
-    - item.0 in roles_to_add_name 
+    - item.tmppk in roles_to_add_name 
   vars:
     roles_to_add_name: "{{rolebindings_pk | map(attribute='tmppk') | difference(rbac_current_pk | map(attribute='tmppk') )}}"
+    myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
 
 - name: To Remove
-# # check rolebindings to remove
+# # check rolebindings to remove, cleanup the pk
   set_fact: 
-    rbac_to_delete: "{{rbac_to_delete + item.1 }}"
-  loop: "{{(rbac_current_pk+rolebindings_pk) | groupby('tmppk') }}"
+    rbac_to_delete: '{{rbac_to_delete + [{ "principal": item.principal, "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
+  loop: "{{rbac_current_pk }}"
   when: 
-    - item.0 in roles_to_delete_name
+    - item.tmppk in roles_to_delete_name
   vars:
     roles_to_delete_name: "{{rbac_current_pk | map(attribute='tmppk') | difference(rolebindings_pk | map(attribute='tmppk') )}}"
-    
+    myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
+
+
 - name: Initialize Diffs
   block:
     - set_fact: 

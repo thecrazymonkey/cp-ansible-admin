@@ -5,7 +5,7 @@
     msg:
       - "Current state>{{ topics_current }}"
       - "Desired state>{{ topics }}"    
-    verbosity: 3
+    verbosity: 2
 
 - name: To add
 # check the topics to add, figure out the config updates later
