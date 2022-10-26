@@ -49,7 +49,7 @@ Notable variables in the inventory (refer to the sample file)
 # list regex representing all topics you want to be left alone
     topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
 
-# sample desired topics state structure - can me managed using external file
+# sample desired topics state structure - can be managed using external file
     topics:
       - topic_name: test
         partitions_count: 6
