@@ -1,0 +1,4 @@
+- name: Combine Dictionary With List Item
+  set_fact: 
+    combine_list: "{{ combine_list + [ myitem | combine(item)] }}"
+  loop: "{{ mylist }}"

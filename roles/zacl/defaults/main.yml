@@ -1,0 +1,15 @@
+---
+# connectivity variables
+rest_server_url: https://rest.confluent.io:8090
+rest_user: user
+rest_user_password: user-secret
+
+zacl_cluster_whitelist: "ivan-cluster|ivan-connect"
+zacl_dump_file: true
+zacl_dump_destination: /Users/ikunz/zacl_dump_out.yml
+zacls: []
+
+# global variables
+zacl_list: []
+zacl_to_add: []
+zacl_to_delete: []

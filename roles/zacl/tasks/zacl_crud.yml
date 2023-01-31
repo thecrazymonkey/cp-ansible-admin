@@ -1,0 +1,42 @@
+---
+- name: Add ACLs
+  uri:
+    url: "{{rest_server_url}}/kafka/v3/clusters/{{ cluster_id }}/acls"
+    method: "{{ http_method }}"
+    validate_certs: false
+    force_basic_auth: true
+    force: yes
+    status_code: "{{ http_status_code }}"
+    url_username: "{{ mds_user }}"
+    url_password: "{{ mds_user_password }}"
+    body: "{ \"resource_name\": \"{{ item.resource_name }}\", \"resource_type\": \"{{ item.resource_type }}\",
+             \"pattern_type\": \"{{ item.pattern_type }}\", \"principal\": \"{{ item.principal }}\",
+             \"host\": \"{{ item.host }}\", \"operation\": \"{{ item.operation }}\",
+             \"permission\": \"{{ item.permission }}\" }"
+    headers:
+      Content-Type: application/json
+    body_format: json
+  loop: "{{ zacl_op_list }}"
+  when: http_method == "POST"
+
+- name: Delete ACLs
+  uri:
+    url: "{{rest_server_url}}/kafka/v3/clusters/{{ cluster_id }}/acls?resource_name={{ item.resource_name }}\
+    &resource_type={{ item.resource_type }}&pattern_type={{ item.pattern_type }}&principal={{ item.principal }}\
+    &host={{ item.host }}&operation={{ item.operation }}&permission={{ item.permission }}"
+    method: "{{ http_method }}"
+    validate_certs: false
+    force_basic_auth: true
+    force: yes
+    status_code: "{{ http_status_code }}"
+    url_username: "{{ mds_user }}"
+    url_password: "{{ mds_user_password }}"
+    body: "{ \"resource_name\": \"{{ item.resource_name }}\", \"resource_type\": \"{{ item.resource_type }}\",
+             \"pattern_type\": \"{{ item.pattern_type }}\", \"principal\": \"{{ item.principal }}\",
+             \"host\": \"{{ item.host }}\", \"operation\": \"{{ item.operation }}\",
+             \"permission\": \"{{ item.permission }}\" }"
+    headers:
+      Content-Type: application/json
+    body_format: json
+  loop: "{{ zacl_op_list }}"
+  when: http_method == "DELETE"

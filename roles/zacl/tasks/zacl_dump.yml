@@ -1,0 +1,32 @@
+---
+# build a configuration structure from current state of rolebindings in the cluster
+- set_fact:
+    zacl_list: []
+
+- name: Get All ACLs
+  uri:
+    url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/acls"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    force: yes
+    url_username: "{{mds_user}}"
+    url_password: "{{mds_user_password}}"
+  register: zacl_list_tmp
+  check_mode: no
+
+- debug:
+    msg="{{zacl_list_tmp}}"
+    verbosity=3
+
+- name: Get List Of Principals, Acls and Resources
+  set_fact: 
+    zacl_list: '{{ zacl_list +  [ { "principal": item.principal, 
+        "pattern_type": item.pattern_type, "resource_name" : item.resource_name,
+        "resource_type" : item.resource_type,
+        "host": item.host, "permission" : item.permission, "operation": item.operation} ] }}'
+  loop: "{{ zacl_list_tmp.json.data }}"
+
+- debug:
+   var: zacl_list
+   verbosity: 2

@@ -1,5 +1,29 @@
 ---
-# Low level topic operations - using Confluent Server v3 API
+# Low level topic operations - using Confluent Server v3 API - once it gets merged
+- name: Add partitions
+  uri:
+    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics"
+    method: PATCH
+    validate_certs: false
+    force_basic_auth: true
+    url_username: "{{rest_user}}"
+    url_password: "{{rest_user_password}}"
+    headers:
+      Content-Type: application/json
+    body_format: json
+    body: >
+      {
+        "data" : "{ partitions_count": {{ item.partitions_count}} "}"
+      }
+    status_code: [200,405]
+  register: _result
+  loop: "{{ topics_in }}"
+
+- debug:
+    var: _result
+    verbosity: 2
+# pass 405 into the cli processing
+
 - name: Add partitions
 # not supported via REST API yet - needs direct call to Kafka Admin API
   shell: |
@@ -12,4 +36,5 @@
   until: topics_result.rc == 0 and 'ERROR' not in topics_result.stderr
   changed_when: "topics_result.rc == 0"
   loop: "{{topics_in}}"
+  when: _result.results[0].status == 405
 

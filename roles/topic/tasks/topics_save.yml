@@ -2,7 +2,8 @@
 - name: Write to a file  
   block:
     - name: Dump To A File
-      local_action: copy content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{topic_dump_destination}}"
+      delegate_to: 'localhost'
+      copy: content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{topic_dump_destination}}" mode=644
       check_mode: no
       vars:
         to_dump: "{{ {'topics': topics_current} }}"    

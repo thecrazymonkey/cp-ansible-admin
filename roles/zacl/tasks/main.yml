@@ -1,0 +1,33 @@
+---
+- name: Dump Zookeeper ACLs
+  include_tasks: zacl_dump.yml
+  vars:
+      cluster_name: "{{cluster_id}}"
+
+- name: Save Centralized ACLs 
+  include_tasks: zacl_save.yml
+  when: zacl_list|length > 0
+
+- name: Delta ZACLs
+  include_tasks: zacl_delta.yml
+
+- name: Create ZACLs
+  include_tasks: zacl_crud.yml
+  vars:
+    zacl_op_list: "{{ zacl_to_add }}"
+    http_method: POST
+    http_status_code: 201
+  when: 
+    - zacl_to_add|length > 0
+    - not ansible_check_mode
+
+- name: Delete ZACLs 
+  include_tasks: zacl_crud.yml
+  vars:
+    zacl_op_list: "{{ zacl_to_delete }}"
+    http_method: DELETE
+    http_status_code: 200
+  when: 
+    - zacl_to_delete|length > 0
+    - not ansible_check_mode
+
