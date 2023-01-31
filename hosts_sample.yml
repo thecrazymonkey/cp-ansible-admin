@@ -270,3 +270,46 @@ all:
         resource_name: test
         resource_type: TOPIC
       principal: User:alice
+
+# if you want current state of Centralized ACLs dumped to a file enable the following and set the file path    
+    cacl_dump_file: false
+    cacl_dump_destination: /tmp/zacl_dump_out.yml
+
+# Zookeeper ACLs management connectivity defined above
+# sample desired ACL state structure
+    cacls:
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: TOPIC
+      principal: User:Bob
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        - host: '*'
+          operation: WRITE
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: TOPIC
+      principal: User:alice      

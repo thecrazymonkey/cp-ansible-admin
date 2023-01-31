@@ -1,0 +1,41 @@
+---
+- name: Dump Centralized ACLs
+  include_tasks: cacl_dump.yml
+  vars:
+      cluster_name: "{{cluster_id}}"
+
+- name: Save Centralized ACLs 
+  include_tasks: roles/common/tasks/acl_save.yml
+  when: acl_list|length > 0
+  vars:
+    acl_list: "{{cacl_list}}"
+    acl_dump_file: "{{cacl_dump_file}}"
+    acl_dump_destination: "{{cacl_dump_destination}}"
+    varname: "cacls"
+
+- name: Delta ZACLs
+  include_tasks: roles/common/tasks/acl_delta.yml
+  vars:
+    acl_list: "{{cacl_list}}"
+    acls: "{{cacls}}"
+
+- name: Create Centralized ACLs
+  include_tasks: cacl_crud.yml
+  vars:
+    cacl_op_list: "{{ acl_to_add }}"
+    http_method: POST
+    http_status_code: 204
+  when: 
+    - acl_to_add|length > 0
+    - not ansible_check_mode
+
+- name: Delete Centralized ACLs 
+  include_tasks: cacl_crud.yml
+  vars:
+    cacl_op_list: "{{ acl_to_delete }}"
+    http_method: DELETE
+    http_status_code: 200
+  when: 
+    - acl_to_delete|length > 0
+    - not ansible_check_mode
+

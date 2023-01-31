@@ -1,0 +1,14 @@
+---
+- name: Confluent ACL management
+  gather_facts: false
+  hosts: localhost
+  environment: "{{proxy_env}}"
+
+  tasks:
+  - name: Set Variables
+    import_role:
+      name: common
+      
+  - name: Process CACL
+    import_role: 
+      name: cacl

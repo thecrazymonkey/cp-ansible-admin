@@ -4,11 +4,11 @@ rest_server_url: https://rest.confluent.io:8090
 rest_user: user
 rest_user_password: user-secret
 
-zacl_dump_file: false
-zacl_dump_destination: /tmp/zacl_dump_out.yml
-zacls: []
+cacl_dump_file: false
+cacl_dump_destination: /tmp/cacl_dump_out.yml
+cacls: []
 
 # global variables
-zacl_list: []
+cacl_list: []
 acl_to_add: []
 acl_to_delete: []

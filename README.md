@@ -12,6 +12,9 @@ Use Cases Supported:
 4. Zookeeper ACL Management for both new and existing clusters (after performing the initial dump of the current state)
     - done using REST API of the Confluent Server
     - Authentication using Basic Auth
+4. Centralize ACL Management for both new and existing clusters (after performing the initial dump of the current state)
+    - done using REST API of the Confluent MDS Server
+    - Authentication using Basic Auth
 
 All playbooks support dumping the initial state to a file by enabling the following variables (and their alternatives for quota and rbac management):
     topic_dump_file: true
@@ -225,6 +228,45 @@ Notable variables in the inventory (refer to the sample file)
 # Zookeeper ACLs management connectivity defined above - note Zookeeper ACLs do not use cluster registry - must use Kafka Cluster ID
 # sample desired ACL state structure
     zacls:
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: TOPIC
+      principal: User:Bob
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        - host: '*'
+          operation: WRITE
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: TOPIC
+      principal: User:alice
+
+# Centralized ACLs management connectivity defined above - note Zookeeper ACLs do not use cluster registry - must use Kafka Cluster ID
+# sample desired ACL state structure
+    cacls:
     - patterns:
       - entries:
         - host: '*'

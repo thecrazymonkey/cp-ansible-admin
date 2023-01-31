@@ -4,30 +4,38 @@
   vars:
       cluster_name: "{{cluster_id}}"
 
-- name: Save Centralized ACLs 
-  include_tasks: zacl_save.yml
-  when: zacl_list|length > 0
+- name: Save Zookeeper ACLs 
+  include_tasks: roles/common/tasks/acl_save.yml
+  when: acl_list|length > 0
+  vars:
+    acl_list: "{{zacl_list}}"
+    acl_dump_file: "{{zacl_dump_file}}"
+    acl_dump_destination: "{{zacl_dump_destination}}"
+    varname: "zacls"
 
 - name: Delta ZACLs
-  include_tasks: zacl_delta.yml
+  include_tasks: roles/common/tasks/acl_delta.yml
+  vars:
+    acl_list: "{{zacl_list}}"
+    acls: "{{zacls}}"
 
 - name: Create ZACLs
   include_tasks: zacl_crud.yml
   vars:
-    zacl_op_list: "{{ zacl_to_add }}"
+    zacl_op_list: "{{ acl_to_add }}"
     http_method: POST
     http_status_code: 201
   when: 
-    - zacl_to_add|length > 0
+    - acl_to_add|length > 0
     - not ansible_check_mode
 
 - name: Delete ZACLs 
   include_tasks: zacl_crud.yml
   vars:
-    zacl_op_list: "{{ zacl_to_delete }}"
+    zacl_op_list: "{{ acl_to_delete }}"
     http_method: DELETE
     http_status_code: 200
   when: 
-    - zacl_to_delete|length > 0
+    - acl_to_delete|length > 0
     - not ansible_check_mode
 

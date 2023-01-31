@@ -1,0 +1,42 @@
+---
+- name: Add ACLs
+  uri:
+    url: "{{mds_server_url}}/security/1.0/acls"
+    method: "{{ http_method }}"
+    validate_certs: false
+    force_basic_auth: true
+    force: yes
+    status_code: "{{ http_status_code }}"
+    url_username: "{{ mds_user }}"
+    url_password: "{{ mds_user_password }}"
+    body: "{ \"scope\": { \"clusters\": { \"kafka-cluster\": \"{{cluster_id}}\" } },\
+    \"aclBinding\": { \"pattern\": { \"name\": \"{{ item.resource_name }}\", \"resourceType\": \"{{ item.resource_type }}\",\
+    \"patternType\": \"{{ item.pattern_type }}\" }, \"entry\": { \"principal\": \"{{ item.principal }}\",\
+    \"host\": \"{{ item.host }}\", \"operation\": \"{{ item.operation }}\",\
+    \"permissionType\": \"{{ item.permission }}\"} } }"
+    headers:
+      Content-Type: application/json
+    body_format: json
+  loop: "{{ cacl_op_list }}"
+  when: http_method == "POST"
+
+- name: Delete ACLs
+  uri:
+    url: "{{mds_server_url}}/security/1.0/acls"
+    method: "{{ http_method }}"
+    validate_certs: false
+    force_basic_auth: true
+    force: yes
+    status_code: "{{ http_status_code }}"
+    url_username: "{{ mds_user }}"
+    url_password: "{{ mds_user_password }}"
+    body: "{ \"scope\": { \"clusters\": { \"kafka-cluster\": \"{{cluster_id}}\" } },\
+    \"aclBindingFilter\": { \"patternFilter\": { \"name\": \"{{ item.resource_name }}\", \"resourceType\": \"{{ item.resource_type }}\",\
+    \"patternType\": \"{{ item.pattern_type }}\" }, \"entryFilter\": { \"principal\": \"{{ item.principal }}\",\
+    \"host\": \"{{ item.host }}\", \"operation\": \"{{ item.operation }}\",\
+    \"permissionType\": \"{{ item.permission }}\"} } }"
+    headers:
+      Content-Type: application/json
+    body_format: json
+  loop: "{{ cacl_op_list }}"
+  when: http_method == "DELETE"
