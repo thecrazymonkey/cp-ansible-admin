@@ -9,6 +9,9 @@ Use Cases Supported:
     - requires all managed clusters to be registered in the Cluster Registry
 3. Quota Management for both new and existing clusters (after performing the initial dump of the current state)
     - 100% CLI implementation (REST API support not available in the Confluent REST API yet)
+4. Zookeeper ACL Management for both new and existing clusters (after performing the initial dump of the current state)
+    - done using REST API of the Confluent Server
+    - Authentication using Basic Auth
 
 All playbooks support dumping the initial state to a file by enabling the following variables (and their alternatives for quota and rbac management):
     topic_dump_file: true
