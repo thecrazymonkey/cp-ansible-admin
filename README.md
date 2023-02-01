@@ -264,7 +264,7 @@ Notable variables in the inventory (refer to the sample file)
         resource_type: TOPIC
       principal: User:alice
 
-# Centralized ACLs management connectivity defined above - note Zookeeper ACLs do not use cluster registry - must use Kafka Cluster ID
+# Centralized ACLs management connectivity defined above - note Centralized ACLs do not use cluster registry - must use Kafka Cluster ID
 # sample desired ACL state structure
     cacls:
     - patterns:
