@@ -75,7 +75,7 @@
     - name: Combine Single List
       set_fact:
         topics_mapped: "{{ topics_mapped|default([]) + [item.1|combine(recursive=True)] }}"
-      loop: "{{ (topics_list + topics_out_partitions|d([]) + topics_out_configs)|groupby('topic_name') }}"
+      loop: "{{ (topics_list + topics_out_partitions|d([]) + topics_out_configs|d([]))|groupby('topic_name') }}"
 
     - name: Cleanup
       set_fact:
