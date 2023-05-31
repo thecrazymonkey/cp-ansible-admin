@@ -44,4 +44,5 @@
   when: 
     - rbac_to_delete|length > 0
     - not ansible_check_mode
+    - rbac_delete_enabled
 

@@ -166,6 +166,11 @@ Notable variables in the inventory (refer to the sample file)
 # regex to limit the clusters managed with this playbook
     rbac_cluster_whitelist: ""
 
+# to only apply the rolebindings (delete operation will be bypassed) defined in the input file set the following (default is true)
+this can be used to apply the rolebindings to a new cluster without deleting the existing ones - e.g. when applying select rolebindings from a different cluster 
+
+    rbac_delete_enabled: false
+
 # quotas management connectivity defined above
 # sample desired quotas state structure
     quotas:
