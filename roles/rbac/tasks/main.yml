@@ -25,7 +25,7 @@
       cluster_name: "{{scope_item}}"
   loop_control:
     loop_var: scope_item
-  when: scope_item | (rbac_cluster_whitelist)|lenght > 0
+  when: scope_item | regex_search(rbac_cluster_whitelist)|length > 0
 
 - name: Create Rolebindings
   include_tasks: rbac_crud.yml
