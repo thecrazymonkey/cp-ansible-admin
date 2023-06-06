@@ -16,7 +16,7 @@ topic_cluster_prefix: "/kafka"
 # list regex representing all topics you want to be left alone
 topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
 # whitelisted
-topic_whitelist: ""
+topic_whitelist: ".*"
 # for dumping the current state
 topic_dump_file: false
 topic_dump_destination: /tmp/topic_dump_out.yml    
