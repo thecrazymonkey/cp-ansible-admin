@@ -26,7 +26,7 @@ all:
     # list regex representing all topics you want to be left alone
     topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
     # regex representing whitelisted topics
-    topic_whitelist: ^test.*
+    topic_whitelist: .*
 # if you want current state dumped to a file enable the following and set the file path    
     topic_dump_file: false
     topic_dump_destination: /tmp/topic_dump_out.yml    
