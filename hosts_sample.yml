@@ -160,7 +160,7 @@ all:
 # define accounts protected from management    
     rbac_protected_accounts: "User:superUser"
 # regex for clusters managed with this playbook
-    rbac_cluster_whitelist: ""
+    rbac_cluster_whitelist: ".*"
 # if you want current state dumped to a file enable the following and set the file path    
     rbac_dump_file: false
     rbac_dump_destination: /tmp/rbac_dump_out.yml    
