@@ -14,3 +14,4 @@ rbac_to_add: []
 rbac_to_delete: []
 rbac_protected_accounts: ""
 rbac_delete_enabled: true
+scopes_list: []

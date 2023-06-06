@@ -19,3 +19,8 @@
 - debug:
     msg="{{scopes_list}}"
     verbosity=3
+
+- name: Failure if no scopes found
+  fail:
+    msg: "No scopes found - make sure your clusters are registered in the Cluster Registry"
+  when: scopes_list|length == 0
