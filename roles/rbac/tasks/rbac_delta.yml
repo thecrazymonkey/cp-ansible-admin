@@ -17,14 +17,14 @@
   set_fact: 
     rbac_current_pk: '{{ rbac_current_pk +  [ item| combine({"tmppk": item.principal+item.role})] }}'
   loop: "{{ rbac_current }}"
-  when: item.clusterName == cluster_name and item.principal|regex_search(rbac_protected_accounts) == none  
+  when: item.clusterName == cluster_name and item.principal|regex_search(rbac_protected_accounts)|length == 0  
 
 - name: Add PKs desired
   # skip the rule name
   set_fact: 
     rolebindings_pk: '{{ rolebindings_pk +  [ { "tmppk": item.principal+item.role, "principal": item.principal, "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
   loop: "{{ rolebindings }}"
-  when: item.clusterName == cluster_name and item.principal|regex_search(rbac_protected_accounts) == none     
+  when: item.clusterName == cluster_name and item.principal|regex_search(rbac_protected_accounts)|length == 0
   vars:
      myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
 
