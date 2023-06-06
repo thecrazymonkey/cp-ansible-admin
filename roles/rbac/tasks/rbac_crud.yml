@@ -11,7 +11,7 @@
     body: "{ \"clusterName\": \"{{item.clusterName}}\" }"
     status_code: 204
   loop: "{{ rbac_list }}"
-  when: item.role | regex_search("^\w+Admin$") != none
+  when: item.role | regex_search("^\w+Admin$")|length > 0
 
 - name: Manage Rolebindings For Principal, Scope and Set of resources
   uri:
@@ -25,4 +25,4 @@
     status_code: 204
     body: "{ \"scope\": { \"clusterName\": \"{{item.clusterName}}\" }, \"resourcePatterns\": {{item.resources}} }"
   loop: "{{ rbac_list }}"
-  when: item.role | regex_search("^\w+Admin$") == none
+  when: item.role | regex_search("^\w+Admin$")|length == 0

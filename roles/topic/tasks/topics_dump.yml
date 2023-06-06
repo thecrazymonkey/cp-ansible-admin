@@ -18,7 +18,7 @@
      topics_list: '{{ topics_list | default([]) +  [{ "topic_name": item.topic_name, "replication_factor" : item.replication_factor, "partitions_count" : item.partitions_count }] }}'
      partitions_defined: true
   loop: "{{ topics_list_temp.json.data | d([]) }}"
-  when: ((item.topic_name | regex_search(topic_whitelist) != none) or (item.topic_name | regex_search(topic_protected) == none)) and item.partitions_count is defined 
+  when: ((item.topic_name | regex_search(topic_whitelist)|length > 0) or (item.topic_name | regex_search(topic_protected)|length == 0)) and item.partitions_count is defined 
 
 - name: Set Only Essential Fields and Non-protected Topics
 # cater for 6.2 -> 7.0 API change
@@ -26,7 +26,7 @@
      topics_list: '{{ topics_list | default([]) +  [{ "topic_name": item.topic_name, "replication_factor" : item.replication_factor }] }}'
      partitions_defined: false
   loop: "{{ topics_list_temp.json.data | d([]) }}"
-  when: ((item.topic_name | regex_search(topic_whitelist) != none) or (item.topic_name | regex_search(topic_protected) == none)) and item.partitions_count is not defined 
+  when: ((item.topic_name | regex_search(topic_whitelist)|length > 0) or (item.topic_name | regex_search(topic_protected)|length == 0)) and item.partitions_count is not defined 
 
 - name: Process List Of Topics
   block:
