@@ -38,4 +38,5 @@
   when: 
     - acl_to_delete|length > 0
     - not ansible_check_mode
+    - acl_delete_enabled
 

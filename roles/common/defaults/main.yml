@@ -8,3 +8,5 @@ binary_base_path: /home/confluent/confluent-7.0.1
 # confluent cluster describe --url ...
 cluster_id: ""
 proxy_env: {}
+acl_delete_enabled: true
+
