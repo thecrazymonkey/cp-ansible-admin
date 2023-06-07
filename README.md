@@ -172,6 +172,9 @@ this can be used to apply the rolebindings to a new cluster without deleting the
     rbac_delete_enabled: false
 
 # quotas management connectivity defined above
+
+## to only apply the quotas (delete operation will be bypassed) defined in the input file set the following (default is true)
+    quotas_delete_enabled: false
 # sample desired quotas state structure
     quotas:
       clients:  
