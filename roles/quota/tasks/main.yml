@@ -42,7 +42,7 @@
   when: 
     - quotas_to_delete[entity]|length > 0
     - not ansible_check_mode
-    - quotas_delete_enabled
+    - quotas_delete_enabled|bool
   loop: 
     - clients
     - users
