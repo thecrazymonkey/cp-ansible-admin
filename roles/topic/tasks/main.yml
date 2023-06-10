@@ -23,7 +23,7 @@
     topics_in: "{{ topics_to_delete }}"
   when: 
     - topics_to_delete|length > 0
-    - topic_delete_enabled
+    - topic_delete_enabled|bool
     - not ansible_check_mode
 
 - name: Update partitions
@@ -32,7 +32,7 @@
     topics_in: "{{ topics_to_reconfigure_part }}"
   when: 
     - topics_to_reconfigure_part|length > 0
-    - topic_partitions_enabled
+    - topic_partitions_enabled|bool
     - not ansible_check_mode
 
 - name: Update topics 
