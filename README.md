@@ -310,3 +310,46 @@ this can be used to apply the rolebindings to a new cluster without deleting the
         resource_name: test
         resource_type: TOPIC
       principal: User:alice
+
+# Usage
+
+## Common
+
+### Verify the execution plan without applying it - dry-run
+ansible-playbook -i inventory.yml -e @vars.yml --check resource_specific_playbook.yml
+### Verify the execution plan without applying it - dry-run, print the plan
+ansible-playbook -i inventory.yml -e @vars.yml --check resource_specific_playbook.yml -vv
+
+## Topics
+
+### Dry-run
+ansible-playbook -i hosts_test.yml topics_management.yml  -vv --check
+### Apply 
+ansible-playbook -i hosts_test.yml topics_management.yml
+
+## Rolebindings
+
+### Dry-run
+ansible-playbook -i hosts_test.yml rbac_management.yml  -vv --check
+### Apply 
+ansible-playbook -i hosts_test.yml rbac_management.yml
+
+## Quotas
+
+### Dry-run
+ansible-playbook -i hosts_test.yml quota_management.yml  -vv --check
+### Apply 
+ansible-playbook -i hosts_test.yml quota_management.yml
+
+## Zookeeper ACLs
+### Dry-run
+ansible-playbook -i hosts_test.yml zacl_management.yml  -vv --check
+### Apply 
+ansible-playbook -i hosts_test.yml zacl_management.yml
+
+## Centralized ACLs
+
+### Dry-run
+ansible-playbook -i hosts_test.yml cacl_management.yml  -vv --check
+### Apply 
+ansible-playbook -i hosts_test.yml cacl_management.yml
