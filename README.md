@@ -34,8 +34,7 @@ Notable variables in the inventory (refer to the sample file)
     rest_user_password: user-secret
 
 # For topics management get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn'      
-    cluster_id: 
-
+    cluster_id: - note that this is optional now and gets populated from the metadata endpoint automatically if not filled
 # properties for Kafka command line use - needed only for partitions_count increase and quota management     
     kafka_broker_hostname: kafka1.confluent.io
     kafka_broker_port: 9091

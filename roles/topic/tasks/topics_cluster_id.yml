@@ -1,0 +1,18 @@
+---
+# Get cluster_id v1 API
+- name: Get cluster_id
+  uri:
+    url: "{{rest_server_url}}/security/1.0/metadataClusterId"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    url_username: "{{rest_user}}"
+    url_password: "{{rest_user_password}}"
+    status_code: 200
+    return_content: true
+  register: result
+  check_mode: no
+
+- set_fact:
+    cluster_id: "{{result.content}}"
+  check_mode: no
