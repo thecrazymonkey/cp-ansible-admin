@@ -9,5 +9,5 @@
         to_dump: "{{ {'topics': topics_current} }}"    
       no_log: False
   when: 
-    - topic_dump_file
+    - topic_dump_file|bool
 

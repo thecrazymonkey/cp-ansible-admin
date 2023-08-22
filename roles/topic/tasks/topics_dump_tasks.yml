@@ -1,0 +1,54 @@
+---
+- set_fact: 
+    topics_out_partitions: []
+    topics_out_configs: []
+    topics_mapped: []
+
+- name: Get Partitions List
+  uri:
+    url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{topic_item.topic_name}}/partitions"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    url_username: "{{rest_user}}"
+    url_password: "{{rest_user_password}}"
+    body_format: json
+  register: partitions_list
+  check_mode: no
+  when: not partitions_defined
+
+- name: Evaluate Partitions Count
+  set_fact: 
+    topics_out_partitions: '{{ topics_out_partitions  +  [{ "topic_name": item.json.data[0].topic_name, "partitions_count" : item.json.data | count }] }}'
+  loop: "{{partitions_list.results}}"
+  when: not partitions_defined
+
+- name: Get Topic Configs
+  uri:
+    url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{topic_item.topic_name}}/configs"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    url_username: "{{rest_user}}"
+    url_password: "{{rest_user_password}}"
+    body_format: json
+    status_code: 200
+  register: configs_list
+  check_mode: no
+
+- name: Filter Static and Default Configs
+  set_fact: 
+    topics_out_configs: '{{ topics_out_configs +  [{ "topic_name": item.topic_name, "configs": { item.name : item.value }}] }}'
+  loop: "{{ configs_list.json.data }}"
+  when: item.source not in ['DEFAULT_CONFIG','STATIC_BROKER_CONFIG']    
+
+# combine all  
+- name: Combine Single List Item
+  set_fact:
+    topics_mapped: "{{ topics_mapped + [item.1|combine(recursive=True)] }}"
+  loop: "{{ ([topic_item] + topics_out_partitions|d([]) + topics_out_configs|d([]))|groupby('topic_name') }}"
+
+- name: Cleanup
+  set_fact:
+    topics_current: '{{ topics_current | default([]) +  [{ "topic_name": item.topic_name, "replication_factor": item.replication_factor, "partitions_count": item.partitions_count, "configs": item.configs|d({})|dict2items(key_name="name", value_name="value")}] }}'
+  loop: "{{ topics_mapped }}"
