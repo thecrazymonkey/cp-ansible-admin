@@ -1,0 +1,337 @@
+topics:
+- configs:
+  - name: min.insync.replicas
+    value: '1'
+  - name: retention.ms
+    value: '60480000'
+  - name: confluent.placement.constraints
+    value: "{\n        \"version\": 2,\n        \"observerPromotionPolicy\": \"under-min-isr\",\n \       \"replicas\": [\n          {\"count\": 2, \"constraints\": {\"rack\": \"test\"}}\n        ], \n        \"observers\": [\n          {\"count\": 1, \"constraints\": {\"rack\": \"test\"}}\n        ]\n        }"
+  partitions_count: 10
+  topic_name: blob1
+- configs:
+  - name: min.insync.replicas
+    value: '2'
+  partitions_count: 6
+  replication_factor: 3
+  topic_name: test
+- configs:
+  - name: min.insync.replicas
+    value: '2'
+  - name: retention.ms
+    value: '60480000'
+  partitions_count: 9
+  replication_factor: 3
+  topic_name: test2
+- configs:
+  - name: min.insync.replicas
+    value: '2'
+  - name: retention.ms
+    value: '604800000'
+  partitions_count: 9
+  replication_factor: 3
+  topic_name: test5
+- configs:
+  - name: confluent.placement.constraints
+    value: "{\r\n    \"version\": 1,\r\n    \"replicas\": [\r\n        {\r\n            \"count\":
+      3\r\n        }\r\n    ]\r\n}"
+  - name: min.insync.replicas
+    value: '1'
+  - name: retention.ms
+    value: '60480000'
+  partitions_count: 10
+  replication_factor: 3
+  topic_name: test6
+- configs:
+  - name: min.insync.replicas
+    value: '1'
+  - name: retention.ms
+    value: '60480001'
+  partitions_count: 11
+  replication_factor: 3
+  topic_name: test7
+- configs:
+  - name: cleanup.policy
+    value: delete
+  - name: compression.type
+    value: producer
+  - name: confluent.compacted.topic.prefer.tier.fetch.ms
+    value: '-1'
+  - name: confluent.key.schema.validation
+    value: 'false'
+  - name: confluent.key.subject.name.strategy
+    value: io.confluent.kafka.serializers.subject.TopicNameStrategy
+  - name: confluent.min.segment.ms
+    value: '1'
+  - name: confluent.placement.constraints
+    value: "{\n        \"version\": 2,\n        \"observerPromotionPolicy\": \"under-min-isr\",\n \       \"replicas\": [\n          {\"count\": 2, \"constraints\": {\"rack\": \"test\"}}\n        ], \n        \"observers\": [\n          {\"count\": 1, \"constraints\": {\"rack\": \"test\"}}\n        ]\n        }"
+  - name: confluent.prefer.tier.fetch.ms
+    value: '-1'
+  - name: confluent.segment.speculative.prefetch.enable
+    value: 'false'
+  - name: confluent.stray.log.delete.delay.ms
+    value: '604800000'
+  - name: confluent.stray.log.max.deletions.per.run
+    value: '72'
+  - name: confluent.tier.cleaner.compact.min.efficiency
+    value: '0.5'
+  - name: confluent.tier.cleaner.compact.segment.min.bytes
+    value: '20971520'
+  - name: confluent.tier.cleaner.dual.compaction
+    value: 'false'
+  - name: confluent.tier.cleaner.enable
+    value: 'false'
+  - name: confluent.tier.cleaner.min.cleanable.ratio
+    value: '0.75'
+  - name: confluent.tier.enable
+    value: 'false'
+  - name: confluent.tier.local.hotset.bytes
+    value: '-1'
+  - name: confluent.tier.local.hotset.ms
+    value: '86400000'
+  - name: confluent.tier.segment.hotset.roll.min.bytes
+    value: '104857600'
+  - name: confluent.value.schema.validation
+    value: 'false'
+  - name: confluent.value.subject.name.strategy
+    value: io.confluent.kafka.serializers.subject.TopicNameStrategy
+  - name: delete.retention.ms
+    value: '86400000'
+  - name: file.delete.delay.ms
+    value: '60000'
+  - name: flush.messages
+    value: '9223372036854775807'
+  - name: flush.ms
+    value: '9223372036854775807'
+  - name: follower.replication.throttled.replicas
+    value: ''
+  - name: index.interval.bytes
+    value: '4096'
+  - name: leader.replication.throttled.replicas
+    value: ''
+  - name: max.compaction.lag.ms
+    value: '9223372036854775807'
+  - name: max.message.bytes
+    value: '1048588'
+  - name: message.downconversion.enable
+    value: 'true'
+  - name: message.format.version
+    value: 2.6-IV0
+  - name: message.timestamp.difference.max.ms
+    value: '9223372036854775807'
+  - name: message.timestamp.type
+    value: CreateTime
+  - name: min.cleanable.dirty.ratio
+    value: '0.5'
+  - name: min.compaction.lag.ms
+    value: '0'
+  - name: min.insync.replicas
+    value: '2'
+  - name: preallocate
+    value: 'false'
+  - name: retention.bytes
+    value: '-1'
+  - name: retention.ms
+    value: '604800000'
+  - name: segment.bytes
+    value: '1073741824'
+  - name: segment.index.bytes
+    value: '10485760'
+  - name: segment.jitter.ms
+    value: '0'
+  - name: segment.ms
+    value: '604800000'
+  - name: unclean.leader.election.enable
+    value: 'false'
+  partitions_count: 3
+  replication_factor: 3
+  topic_name: topic_61
+- configs:
+  - name: cleanup.policy
+    value: delete
+  - name: compression.type
+    value: producer
+  - name: confluent.compacted.topic.prefer.tier.fetch.ms
+    value: '-1'
+  - name: confluent.key.schema.validation
+    value: 'false'
+  - name: confluent.key.subject.name.strategy
+    value: io.confluent.kafka.serializers.subject.TopicNameStrategy
+  - name: confluent.min.segment.ms
+    value: '1'
+  - name: confluent.placement.constraints
+    value: "{\n        \"version\": 2,\n        \"observerPromotionPolicy\": \"under-min-isr\",\n \       \"replicas\": [\n          {\"count\": 2, \"constraints\": {\"rack\": \"test\"}}\n        ], \n        \"observers\": [\n          {\"count\": 1, \"constraints\": {\"rack\": \"test\"}}\n        ]\n        }"
+  - name: confluent.prefer.tier.fetch.ms
+    value: '-1'
+  - name: confluent.segment.speculative.prefetch.enable
+    value: 'false'
+  - name: confluent.stray.log.delete.delay.ms
+    value: '604800000'
+  - name: confluent.stray.log.max.deletions.per.run
+    value: '72'
+  - name: confluent.tier.cleaner.compact.min.efficiency
+    value: '0.5'
+  - name: confluent.tier.cleaner.compact.segment.min.bytes
+    value: '20971520'
+  - name: confluent.tier.cleaner.dual.compaction
+    value: 'false'
+  - name: confluent.tier.cleaner.enable
+    value: 'false'
+  - name: confluent.tier.cleaner.min.cleanable.ratio
+    value: '0.75'
+  - name: confluent.tier.enable
+    value: 'false'
+  - name: confluent.tier.local.hotset.bytes
+    value: '-1'
+  - name: confluent.tier.local.hotset.ms
+    value: '86400000'
+  - name: confluent.tier.segment.hotset.roll.min.bytes
+    value: '104857600'
+  - name: confluent.value.schema.validation
+    value: 'false'
+  - name: confluent.value.subject.name.strategy
+    value: io.confluent.kafka.serializers.subject.TopicNameStrategy
+  - name: delete.retention.ms
+    value: '86400000'
+  - name: file.delete.delay.ms
+    value: '60000'
+  - name: flush.messages
+    value: '9223372036854775807'
+  - name: flush.ms
+    value: '9223372036854775807'
+  - name: follower.replication.throttled.replicas
+    value: ''
+  - name: index.interval.bytes
+    value: '4096'
+  - name: leader.replication.throttled.replicas
+    value: ''
+  - name: max.compaction.lag.ms
+    value: '9223372036854775807'
+  - name: max.message.bytes
+    value: '1048588'
+  - name: message.downconversion.enable
+    value: 'true'
+  - name: message.format.version
+    value: 2.6-IV0
+  - name: message.timestamp.difference.max.ms
+    value: '9223372036854775807'
+  - name: message.timestamp.type
+    value: CreateTime
+  - name: min.cleanable.dirty.ratio
+    value: '0.5'
+  - name: min.compaction.lag.ms
+    value: '0'
+  - name: min.insync.replicas
+    value: '2'
+  - name: preallocate
+    value: 'false'
+  - name: retention.bytes
+    value: '-1'
+  - name: retention.ms
+    value: '604800000'
+  - name: segment.bytes
+    value: '1073741824'
+  - name: segment.index.bytes
+    value: '10485760'
+  - name: segment.jitter.ms
+    value: '0'
+  - name: segment.ms
+    value: '604800000'
+  - name: unclean.leader.election.enable
+    value: 'false'
+  partitions_count: 3
+  topic_name: topic_62
+- configs:
+  - name: cleanup.policy
+    value: delete
+  - name: compression.type
+    value: producer
+  - name: confluent.compacted.topic.prefer.tier.fetch.ms
+    value: '-1'
+  - name: confluent.key.schema.validation
+    value: 'false'
+  - name: confluent.key.subject.name.strategy
+    value: io.confluent.kafka.serializers.subject.TopicNameStrategy
+  - name: confluent.min.segment.ms
+    value: '1'
+  - name: confluent.prefer.tier.fetch.ms
+    value: '-1'
+  - name: confluent.segment.speculative.prefetch.enable
+    value: 'false'
+  - name: confluent.stray.log.delete.delay.ms
+    value: '604800000'
+  - name: confluent.stray.log.max.deletions.per.run
+    value: '72'
+  - name: confluent.tier.cleaner.compact.min.efficiency
+    value: '0.5'
+  - name: confluent.tier.cleaner.compact.segment.min.bytes
+    value: '20971520'
+  - name: confluent.tier.cleaner.dual.compaction
+    value: 'false'
+  - name: confluent.tier.cleaner.enable
+    value: 'false'
+  - name: confluent.tier.cleaner.min.cleanable.ratio
+    value: '0.75'
+  - name: confluent.tier.enable
+    value: 'false'
+  - name: confluent.tier.local.hotset.bytes
+    value: '-1'
+  - name: confluent.tier.local.hotset.ms
+    value: '86400000'
+  - name: confluent.tier.segment.hotset.roll.min.bytes
+    value: '104857600'
+  - name: confluent.value.schema.validation
+    value: 'false'
+  - name: confluent.value.subject.name.strategy
+    value: io.confluent.kafka.serializers.subject.TopicNameStrategy
+  - name: delete.retention.ms
+    value: '86400000'
+  - name: file.delete.delay.ms
+    value: '60000'
+  - name: flush.messages
+    value: '9223372036854775807'
+  - name: flush.ms
+    value: '9223372036854775807'
+  - name: follower.replication.throttled.replicas
+    value: ''
+  - name: index.interval.bytes
+    value: '4096'
+  - name: leader.replication.throttled.replicas
+    value: ''
+  - name: max.compaction.lag.ms
+    value: '9223372036854775807'
+  - name: max.message.bytes
+    value: '1048588'
+  - name: message.downconversion.enable
+    value: 'true'
+  - name: message.format.version
+    value: 2.6-IV0
+  - name: message.timestamp.difference.max.ms
+    value: '9223372036854775807'
+  - name: message.timestamp.type
+    value: CreateTime
+  - name: min.cleanable.dirty.ratio
+    value: '0.5'
+  - name: min.compaction.lag.ms
+    value: '0'
+  - name: min.insync.replicas
+    value: '2'
+  - name: preallocate
+    value: 'false'
+  - name: retention.bytes
+    value: '-1'
+  - name: retention.ms
+    value: '604800000'
+  - name: segment.bytes
+    value: '1073741824'
+  - name: segment.index.bytes
+    value: '10485760'
+  - name: segment.jitter.ms
+    value: '0'
+  - name: segment.ms
+    value: '604800000'
+  - name: unclean.leader.election.enable
+    value: 'false'
+  - name: confluent.placement.constraints
+    value: "{\n        \"version\": 2,\n        \"observerPromotionPolicy\": \"under-min-isr\",\n \       \"replicas\": [\n          {\"count\": 2, \"constraints\": {\"rack\": \"test\"}}\n        ], \n        \"observers\": [\n          {\"count\": 1, \"constraints\": {\"rack\": \"test\"}}\n        ]\n        }"
+  partitions_count: 3
+  topic_name: topic_63

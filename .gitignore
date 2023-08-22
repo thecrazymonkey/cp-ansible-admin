@@ -9,3 +9,5 @@ test.yml
 settings
 topic_dump_out.yml
 quotas_dump_out.yml
+ansible.log
+ansible.cfg
