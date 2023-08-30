@@ -94,7 +94,7 @@
   set_fact: 
     rbac_current: '{{ rbac_current +  [ { "principal": item.principal, "role": item.role, "clusterName" : cluster_name }] }}'
   loop: "{{ principals_list }}"
-  when: item.role | regex_search("^\w+Admin$") != none
+  when: item.role | regex_search("^\w+Admin$|^Operator$") != none
 
 - debug:
    var: rbac_current
