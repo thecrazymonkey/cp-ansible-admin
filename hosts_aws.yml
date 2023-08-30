@@ -1,0 +1,370 @@
+---
+all:
+  vars:
+    #    ansible_connection: ssh
+    #    ansible_user: ec2-user
+    ansible_become: false
+      #    ansible_ssh_private_key_file: ~/.ssh/ivan_gcp      
+      #    become: false
+    rest_server_url: https://kafka1.ivan.ps.confluent.io:8090
+#    rest_server_url: https://kafka1.ivan.ps.confluent.io:8090
+    rest_user: superUser
+    rest_user_password: superUser
+#    kafka_broker_hostname: kafka1.ivan.ps.confluent.io
+    kafka_broker_hostname: kafka.minikube.lan
+#    kafka_broker_port: 9091
+    kafka_broker_port: 9092
+#    kafka_broker_client_config_file: ./settings/client.properties
+    kafka_broker_client_config_file: ./settings/client_minikube.properties
+    secrets_protection_masterkey: blahblah
+    binary_base_path: /Users/ikunz/confluent-7.3.1
+    cluster_id: 
+    run_host: kafka1.ivan.ps.confluent.io
+
+    topics: []
+    # defaults
+    topic_delete_enabled: true
+    topic_partitions_enabled: false
+    topic_protected: ^connect.*|^ksql.*|^confluent.*|^operator.*|^_schemas.*
+    topic_whitelist: ^_confluent-controlcenter.*
+    topic_dump_file: true
+    topic_dump_destination: ./topic_dump_out.yml    
+
+# rbac section
+
+    mds_user: mds
+    mds_user_password: mds
+      #    mds_server_url: https://kafka1.ivan.ps.confluent.io:8090
+    mds_server_url: https://mds.minikube.lan:443
+   
+    rolebindings:
+    - clusterName: ivan-cluster
+      name: ivan-cluster-0
+      principal: User:connectAdmin
+      resources:
+      - name: _confluent-monitoring
+        patternType: PREFIXED
+        resourceType: Topic
+      role: DeveloperWrite
+    - clusterName: ivan-cluster
+      name: ivan-cluster-1
+      principal: User:connectAdmin
+      resources:
+      - name: operator.connect
+        patternType: LITERAL
+        resourceType: Group
+      - name: operator.connect-
+        patternType: PREFIXED
+        resourceType: Topic
+      role: ResourceOwner
+    - clusterName: ivan-cluster
+      name: ivan-cluster-2
+      principal: User:ksqlDBAdmin
+      resources:
+      - name: kafka-cluster
+        patternType: LITERAL
+        resourceType: Cluster
+      - name: operator.ksqldb_
+        patternType: PREFIXED
+        resourceType: TransactionalId
+      role: DeveloperWrite
+    - clusterName: ivan-cluster
+      name: ivan-cluster-3
+      principal: User:ksqlDBAdmin
+      resources:
+      - name: _confluent-ksql-operator.ksqldb_
+        patternType: PREFIXED
+        resourceType: Group
+      - name: _confluent-ksql-operator.ksqldb__command_topic
+        patternType: LITERAL
+        resourceType: Topic
+      - name: operator.ksqldb_ksql_processing_log
+        patternType: LITERAL
+        resourceType: Topic
+      role: ResourceOwner
+    - clusterName: ivan-cluster
+      name: ivan-cluster-4
+      principal: User:schemaregistryUser
+      resources:
+      - name: id_schemaregistry_operator
+        patternType: LITERAL
+        resourceType: Group
+      - name: _confluent-license
+        patternType: LITERAL
+        resourceType: Topic
+      - name: _schemas_schemaregistry_operator
+        patternType: LITERAL
+        resourceType: Topic
+      - name: _confluent-command
+        patternType: LITERAL
+        resourceType: Topic
+      role: ResourceOwner
+    - clusterName: ivan-cluster
+      name: ivan-cluster-5
+      principal: User:controlcenterAdmin
+      role: SystemAdmin
+    - name: ivan-cluster-7
+      clusterName: ivan-cluster
+      principal: User:alice
+      resources:
+      - name: test
+        patternType: PREFIXED
+        resourceType: Topic
+      - name: test
+        patternType: PREFIXED
+        resourceType: Group
+      - name: connect
+        patternType: PREFIXED
+        resourceType: Group
+      role: ResourceOwner
+    - name: ivan-cluster-9
+      clusterName: "ivan-connect"
+      principal: "User:connectAdmin"
+      role: "SecurityAdmin"
+    - name: ivan-cluster-10
+      clusterName: "ivan-connect"
+      principal: "User:superUser"
+      role: "SystemAdmin"
+    - name: ivan-cluster-11
+      clusterName: "ivan-sr"
+      principal: "User:schemaregistryUser"
+      role: "SecurityAdmin"
+    - name: ivan-cluster-12
+      clusterName: "ivan-sr"
+      principal: "User:superUser"
+      role: "SystemAdmin"
+    - name: ivan-cluster-13
+      clusterName: ivan-cluster
+      principal: User:bob
+      role: ResourceOwner
+      resources:
+      - name: test
+        patternType: PREFIXED
+        resourceType: Topic
+      - name: test
+        patternType: PREFIXED
+        resourceType: Group
+    # - name: ivan-cluster-8
+    #   clusterName: ivan-cluster
+    #   principal: User:kafkaAdmin
+    #   role: SystemAdmin
+    # - clusterName: ivan-cluster
+    #   name: ivan-cluster-14
+    #   principal: User:kafkaUser
+    #   role: SystemAdmin
+    
+    rbac_cluster_whitelist: ".*"
+    rbac_dump_file: true
+    rbac_dump_destination: /Users/ikunz/rbac_dump_out.yml
+    rbac_protected_accounts: "User:superUser"
+
+    quotas_dump_file: false
+    quotas_dump_destination: ./quotas_dump_out.yml    
+    quotas:
+      clients:
+        - clients: test
+          consumer_byte_rate: 100001.0
+          producer_byte_rate: 100001.0
+          request_percentage: 21.0
+        - clients: test2
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100002.0
+          request_percentage: 22.0
+        # - clients: test3
+        #   consumer_byte_rate: 100003.0
+        #   producer_byte_rate: 100003.0
+        #   request_percentage: 23.0
+        - clients: test4
+          consumer_byte_rate: 100004.0
+          producer_byte_rate: 100004.0
+          request_percentage: 24.0
+      # - client_id: test5
+      #   consumer_byte_rate: 100005.0
+      #   producer_byte_rate: 100005.0
+      #   request_percentage: 25.0
+        - clients: default
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          request_percentage: 21.0
+      users:          
+        - users: test
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          request_percentage: 20.0
+        # - users: test2
+        #   consumer_byte_rate: 100002.0
+        #   producer_byte_rate: 100001.0
+        #   request_percentage: 22.0
+        - users: test3
+          consumer_byte_rate: 100003.0
+          producer_byte_rate: 100003.0
+          request_percentage: 23.0
+          clients:
+            - clients: test
+              consumer_byte_rate: 100001.0
+              producer_byte_rate: 100001.0
+              request_percentage: 21.0
+            - clients: test2
+              consumer_byte_rate: 100002.0
+              producer_byte_rate: 100002.0
+              request_percentage: 23.0
+            # - clients: test3
+            #   consumer_byte_rate: 100003.0
+            #   producer_byte_rate: 100003.0
+            #   request_percentage: 23.0
+        # - users: test6
+        #   consumer_byte_rate: 100003.0
+        #   producer_byte_rate: 100003.0
+        #   request_percentage: 26.0
+        #   clients:
+        #     - clients: test
+        #       consumer_byte_rate: 100001.0
+        #       producer_byte_rate: 100001.0
+        #       request_percentage: 21.0
+        #     - clients: test2
+        #       consumer_byte_rate: 100002.0
+        #       request_percentage: 24.0
+        #       producer_byte_rate: 100002.0
+        #     # - clients: test3
+        #     #   consumer_byte_rate: 100003.0
+        #     #   request_percentage: 23.0
+        #     #   producer_byte_rate: 100003.0
+        # - users: test4
+        #   producer_byte_rate: 100004.0
+        #   request_percentage: 24.0
+        #   consumer_byte_rate: 100004.0
+        # # - users: test7
+        # #   clients:
+        # #     - clients: client2
+        # #       consumer_byte_rate: 100001.0
+        # #       producer_byte_rate: 100001.0
+        # #       request_percentage: 22.0
+        # - users: test5
+        #   consumer_byte_rate: 100004.0
+        #   producer_byte_rate: 100004.0
+        #   request_percentage: 26.0
+        #   clients:
+        #     - clients: test2
+        #       consumer_byte_rate: 100002.0
+        #       producer_byte_rate: 100002.0
+        #       request_percentage: 22.0
+        #     - clients: test
+        #       consumer_byte_rate: 100001.0
+        #       producer_byte_rate: 100001.0
+        #       request_percentage: 23.0
+        - users: default
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          request_percentage: 20.0
+          clients:
+            - clients: test
+              consumer_byte_rate: 100001.0
+              producer_byte_rate: 100001.0
+              request_percentage: 21.0
+            - clients: test2
+              consumer_byte_rate: 100002.0
+              producer_byte_rate: 100002.0
+              request_percentage: 22.0
+
+    cacl_dump_file: true
+    cacl_dump_destination: /Users/ikunz/cacl_dump_out.yml
+    cacls:
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        - host: '*'
+          operation: CREATE
+          permission: ALLOW
+        - host: '*'
+          operation: DELETE
+          permission: ALLOW
+        - host: '*'
+          operation: WRITE
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: TOPIC
+      principal: User:Bob
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: DELETE
+          permission: ALLOW
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        - host: '*'
+          operation: WRITE
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: WRITE
+          permission: ALLOW
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        - host: '*'
+          operation: CREATE
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: TOPIC
+      principal: User:alice
+      
+    zacl_dump_file: true
+    zacl_dump_destination: /Users/ikunz/zacl_dump_out.yml
+
+    zacls:
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: TOPIC
+      principal: User:Bob
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        - host: '*'
+          operation: WRITE
+          permission: ALLOW
+        - host: '*'
+          operation: CREATE
+          permission: ALLOW
+        - host: '*'
+          operation: DELETE
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: TOPIC
+      principal: User:alice

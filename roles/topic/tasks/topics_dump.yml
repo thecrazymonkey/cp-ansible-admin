@@ -36,58 +36,8 @@
     test_protected: "{{ item.topic_name| regex_search(topic_protected) }}"
 
 - name: Process List Of Topics
-  block:
-    - name: Get Partitions List
-      uri:
-        url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/partitions"
-        method: GET
-        validate_certs: false
-        force_basic_auth: true
-        url_username: "{{rest_user}}"
-        url_password: "{{rest_user_password}}"
-        body_format: json
-      register: partitions_list
-      loop: "{{ topics_list }}"
-      check_mode: no
-      when: not partitions_defined
-
-    - name: Evaluate Partitions Count
-      set_fact: 
-        topics_out_partitions: '{{ topics_out_partitions | default([]) +  [{ "topic_name": item.json.data[0].topic_name, "partitions_count" : item.json.data | count }] }}'
-      loop: "{{partitions_list.results}}"
-      when: not partitions_defined
-
-    - name: Get Topics Configs
-      uri:
-        url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/configs"
-        method: GET
-        validate_certs: false
-        force_basic_auth: true
-        url_username: "{{rest_user}}"
-        url_password: "{{rest_user_password}}"
-        body_format: json
-        status_code: 200
-      register: configs_list
-      loop: "{{ topics_list }}"
-      check_mode: no
-
-    # filter out static and default
-    - name: Filter Static and Default Configs
-      set_fact: 
-        topics_out_configs: '{{ topics_out_configs | default([]) +  [{ "topic_name": item.1.topic_name, "configs": { item.1.name : item.1.value }}] }}'
-      loop: "{{ configs_list.results | d([]) | subelements('json.data') }}"
-      when: item.1.source not in ['DEFAULT_CONFIG','STATIC_BROKER_CONFIG']    
-
-    # combine all  
-    - name: Combine Single List
-      set_fact:
-        topics_mapped: "{{ topics_mapped|default([]) + [item.1|combine(recursive=True)] }}"
-      loop: "{{ (topics_list + topics_out_partitions|d([]) + topics_out_configs|d([]))|groupby('topic_name') }}"
-
-    - name: Cleanup
-      set_fact:
-        topics_current: '{{ topics_current | default([]) +  [{ "topic_name": item.topic_name, "replication_factor": item.replication_factor, "partitions_count": item.partitions_count, "configs": item.configs|d({})|dict2items(key_name="name", value_name="value")}] }}'
-      loop: "{{ topics_mapped }}"
-
+  include_tasks: tasks/topics_dump_tasks.yml
+  loop: "{{ topics_list }}"
   when: topics_list | d([]) | length > 0
-
+  loop_control:
+    loop_var: topic_item

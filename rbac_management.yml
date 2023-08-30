@@ -1,7 +1,7 @@
 ---
 - name: RBAC management
   gather_facts: false
-  hosts: localhost
+  hosts: "{{ run_host|default('localhost') }}"
   environment: "{{proxy_env}}"
 
   tasks:
