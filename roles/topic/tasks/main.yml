@@ -1,6 +1,6 @@
 ---
 - name: Determine the cluster_id
-  include_tasks: topics_cluster_id.yml
+  include_tasks: roles/common/tasks/_cluster_id.yml
   when: cluster_id |d('',true)|length == 0
   
 - name: Dump topics 

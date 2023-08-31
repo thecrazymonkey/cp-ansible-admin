@@ -1,4 +1,8 @@
 ---
+- name: Determine the cluster_id
+  include_tasks: roles/common/tasks/_cluster_id.yml
+  when: cluster_id |d('',true)|length == 0
+
 - name: Dump Zookeeper ACLs
   include_tasks: zacl_dump.yml
   vars:
