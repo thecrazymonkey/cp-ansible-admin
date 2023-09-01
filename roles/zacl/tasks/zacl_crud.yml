@@ -7,8 +7,8 @@
     force_basic_auth: true
     force: yes
     status_code: "{{ http_status_code }}"
-    url_username: "{{ mds_user }}"
-    url_password: "{{ mds_user_password }}"
+    url_username: "{{ rest_user }}"
+    url_password: "{{ rest_user_password }}"
     body: "{ \"resource_name\": \"{{ item.resource_name }}\", \"resource_type\": \"{{ item.resource_type }}\",
              \"pattern_type\": \"{{ item.pattern_type }}\", \"principal\": \"{{ item.principal }}\",
              \"host\": \"{{ item.host }}\", \"operation\": \"{{ item.operation }}\",
@@ -29,8 +29,8 @@
     force_basic_auth: true
     force: yes
     status_code: "{{ http_status_code }}"
-    url_username: "{{ mds_user }}"
-    url_password: "{{ mds_user_password }}"
+    url_username: "{{ rest_user }}"
+    url_password: "{{ rest_user_password }}"
     body: "{ \"resource_name\": \"{{ item.resource_name }}\", \"resource_type\": \"{{ item.resource_type }}\",
              \"pattern_type\": \"{{ item.pattern_type }}\", \"principal\": \"{{ item.principal }}\",
              \"host\": \"{{ item.host }}\", \"operation\": \"{{ item.operation }}\",
