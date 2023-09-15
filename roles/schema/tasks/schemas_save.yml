@@ -1,0 +1,12 @@
+---
+- name: Write to a file  
+  block:
+    - name: Dump To A File
+      delegate_to: 'localhost'
+      copy: content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{schema_dump_destination}}" mode=644
+      check_mode: no
+      vars:
+        to_dump: "{{ {'schemas': schemas_current} }}"    
+      no_log: False
+  when: 
+    - schema_dump_file

@@ -1,0 +1,340 @@
+all:
+  vars:
+    ansible_become: false
+    # configure connectivity for topics management
+    rest_server_url: https://kafka1.confluent.io:8090
+    rest_user: user
+    rest_user_password: user-secret
+# get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn'      
+    cluster_id: 
+# properties for Kafka command line use - needed only for partitions_count increase and quota management     
+    kafka_broker_hostname: kafka1.confluent.io
+    kafka_broker_port: 9091
+# add configuration file details for client connectivity to the cluster    
+    kafka_broker_client_config_file: ./settings/client.properties
+# provide secrets protection key if applicable    
+    secrets_protection_masterkey: blahblah
+# path to binaries    
+    binary_base_path: /home/confluent/confluent-7.0.1    
+
+    # topics delete is disabled by default
+    topic_delete_enabled: false
+    # partitions management disabled by default
+    topic_partitions_enabled: false
+    # prefix when embedded proxy is used
+    topic_cluster_prefix: "/kafka"
+    # list regex representing all topics you want to be left alone
+    topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
+    # regex representing whitelisted topics
+    topic_whitelist: .*
+# if you want current state dumped to a file enable the following and set the file path    
+    topic_dump_file: false
+    topic_dump_destination: /tmp/topic_dump_out.yml    
+
+# sample desired topics state structure      
+    topics:
+# here is config change - value change and value delete    
+      - topic_name: test
+        partitions_count: 6
+        replication_factor: 3
+        configs:
+          - name: min.insync.replicas
+            value: "2"
+      - topic_name: test2
+# here is partitions_count increase      
+        partitions_count: 6
+        replication_factor: 3
+        configs:
+          - name: min.insync.replicas
+            value: "1"
+          - name: retention.ms
+            value: "60480000"
+# test3 - to delete           
+      - topic_name: test5
+# here is topic to be added      
+        partitions_count: 6
+        replication_factor: 3
+        configs:
+          - name: min.insync.replicas
+            value: "2"
+          - name: retention.ms
+            value: "604800000"
+      - topic_name: test6
+# here is topic to be added      
+        partitions_count: 6
+        replication_factor: 3
+        configs:
+          - name: min.insync.replicas
+            value: "2"
+          - name: retention.ms
+            value: "60480000"
+# rbac section
+# connectivity for the MDS connection - the user must be SystemAdmin 
+    mds_user: mds
+    mds_user_password: mds
+    mds_server_url: https://kafka1.confluent.io:8090
+
+# sample desired rolebindings state configuration   
+    rolebindings:
+    - clusterName: test-cluster
+      name: test-cluster-0
+      principal: User:connectAdmin
+      resources:
+      - name: _confluent-monitoring
+        patternType: PREFIXED
+        resourceType: Topic
+      role: DeveloperWrite
+    - clusterName: test-cluster
+      name: test-cluster-1
+      principal: User:connectAdmin
+      resources:
+      - name: operator.connect
+        patternType: LITERAL
+        resourceType: Group
+      - name: operator.connect-
+        patternType: PREFIXED
+        resourceType: Topic
+      role: ResourceOwner
+    - clusterName: test-cluster
+      name: test-cluster-2
+      principal: User:ksqlDBAdmin
+      resources:
+      - name: kafka-cluster
+        patternType: LITERAL
+        resourceType: Cluster
+      - name: operator.ksqldb_
+        patternType: PREFIXED
+        resourceType: TransactionalId
+      role: DeveloperWrite
+    - clusterName: test-cluster
+      name: test-cluster-3
+      principal: User:ksqlDBAdmin
+      resources:
+      - name: _confluent-ksql-operator.ksqldb_
+        patternType: PREFIXED
+        resourceType: Group
+      - name: _confluent-ksql-operator.ksqldb__command_topic
+        patternType: LITERAL
+        resourceType: Topic
+      - name: operator.ksqldb_ksql_processing_log
+        patternType: LITERAL
+        resourceType: Topic
+      role: ResourceOwner
+    - clusterName: test-cluster
+      name: test-cluster-4
+      principal: User:schemaregistryUser
+      resources:
+      - name: id_schemaregistry_operator
+        patternType: LITERAL
+        resourceType: Group
+      - name: _confluent-license
+        patternType: LITERAL
+        resourceType: Topic
+      - name: _schemas_schemaregistry_operator
+        patternType: LITERAL
+        resourceType: Topic
+      role: ResourceOwner
+    - clusterName: test-cluster
+      name: test-cluster-5
+      principal: User:controlcenterAdmin
+      role: SystemAdmin
+    - clusterName: test-cluster
+      name: test-cluster-6
+      principal: User:superUser
+      role: SystemAdmin
+    - name: test-cluster-7
+      clusterName: test-cluster
+      principal: User:alice
+      resources:
+      - name: test
+        patternType: PREFIXED
+        resourceType: Topic
+      # - name: test
+      #   patternType: PREFIXED
+      #   resourceType: Group
+      role: ResourceOwner
+    - name: test-cluster-8
+      clusterName: test-cluster
+      principal: User:bob
+      role: SystemAdmin
+# define accounts protected from management    
+    rbac_protected_accounts: "User:superUser"
+# regex for clusters managed with this playbook
+    rbac_cluster_whitelist: ".*"
+# if you want current state dumped to a file enable the following and set the file path    
+    rbac_dump_file: false
+    rbac_dump_destination: /tmp/rbac_dump_out.yml    
+
+# if you want current state dumped to a file enable the following and set the file path    
+    quotas_dump_file: true
+    quotas_dump_destination: /tmp/quotas_dump_out.yml    
+
+# quotas management connectivity defined above
+# sample desired quotas state structure
+    quotas:
+      clients:  
+        - clients: test
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          # request_percentage: 30.0
+        # - client_id: test2
+        #   consumer_byte_rate: 100002.0
+        #   producer_byte_rate: 100001.0
+        - clients: test3
+          consumer_byte_rate: 100003.0
+          producer_byte_rate: 100003.0
+          request_percentage: 20.0
+        - clients: test4
+          consumer_byte_rate: 100004.0
+          producer_byte_rate: 100004.0
+          request_percentage: 20.0
+        - clients: default
+          consumer_byte_rate: 100004.0
+          producer_byte_rate: 100004.0
+          request_percentage: 20.0
+      users:          
+        - users: test
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          request_percentage: 20.0
+        # - users: test2
+        #   consumer_byte_rate: 100002.0
+        #   producer_byte_rate: 100001.0
+        #   request_percentage: 22.0
+        - users: test3
+          consumer_byte_rate: 100003.0
+          producer_byte_rate: 100003.0
+          request_percentage: 23.0
+          clients:
+            - clients: test
+              consumer_byte_rate: 100001.0
+              producer_byte_rate: 100001.0
+              request_percentage: 21.0
+            - clients: test2
+              consumer_byte_rate: 100002.0
+              producer_byte_rate: 100002.0
+              request_percentage: 23.0
+            # - clients: test3
+            #   consumer_byte_rate: 100003.0
+            #   producer_byte_rate: 100003.0
+            #   request_percentage: 23.0
+        - users: default
+          consumer_byte_rate: 100002.0
+          producer_byte_rate: 100001.0
+          request_percentage: 20.0
+          clients:
+            - clients: test
+              consumer_byte_rate: 100001.0
+              producer_byte_rate: 100001.0
+              request_percentage: 21.0
+
+# if you want current state of Zookeeper ACLs dumped to a file enable the following and set the file path    
+    zacl_dump_file: false
+    zacl_dump_destination: /tmp/zacl_dump_out.yml
+
+# Zookeeper ACLs management connectivity defined above
+# sample desired ACL state structure
+    zacls:
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: TOPIC
+      principal: User:Bob
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        - host: '*'
+          operation: WRITE
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: TOPIC
+      principal: User:alice
+
+# if you want current state of Centralized ACLs dumped to a file enable the following and set the file path    
+    cacl_dump_file: false
+    cacl_dump_destination: /tmp/zacl_dump_out.yml
+
+# Zookeeper ACLs management connectivity defined above
+# sample desired ACL state structure
+    cacls:
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: bobtest
+        resource_type: TOPIC
+      principal: User:Bob
+    - patterns:
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        - host: '*'
+          operation: WRITE
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: GROUP
+      - entries:
+        - host: '*'
+          operation: READ
+          permission: ALLOW
+        pattern_type: PREFIXED
+        resource_name: test
+        resource_type: TOPIC
+      principal: User:alice    
+# Sample desired state structure for schema management
+    schemas:
+       topics:
+         - name: test
+           value:
+            #compatibility: "FORWARD"
+            #schema_delete_curr: true
+            #schema_update: false  
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc"
+           key:
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue_v1.avsc"
+         - name: test2
+           value:
+             schema_delete_curr: true
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto"
+           key:
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto"
+         - name: test3
+           value:
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.json"
+           key:
+             #schema_delete_all: true
+             compatibility: "FORWARD"
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.json"
+

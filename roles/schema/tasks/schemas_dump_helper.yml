@@ -1,0 +1,67 @@
+---
+- name: Get the versions of the subjects
+  uri:
+    url: "{{sr_server_url}}/subjects/{{item_subject}}/versions"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    return_content: yes  
+    url_username: "{{sr_user}}"
+    url_password: "{{sr_user_password}}"
+   #client_cert: "{{ssl_file_path}}/{{host_cert_name}}"
+   #client_key: "{{ssl_file_path}}/{{host_key_name}}"
+    body_format: json
+  register: subject_versions
+  check_mode: no
+  delegate_to: "{{ target_host }}" 
+
+
+- name: Combine subjects and versions
+  set_fact: 
+    subject_versions_t1: '{{ [{"subject_name": item_subject, "versions": subject_versions.json, "latest_version": subject_versions.json|last} ] }}'   
+
+
+- name: Reset subjects_versions_t2
+  set_fact:
+    subject_versions_t2: []
+
+- name: Combine subjects and versions t2
+  set_fact: 
+     subject_versions_t2: '{{ subject_versions_t2 | d([]) +  [{ "subject_name": item.0.subject_name, "version_id" : item.1,
+                           "latest_version": "true" if item.1 == item.0.latest_version else "false" }] }}'
+  loop: "{{ subject_versions_t1 | subelements('versions') }}" 
+
+- name: Combine subjects and versions t3
+  set_fact:
+    subject_versions_t3: '{{ subject_versions_t2 | json_query(jq) }}'
+  vars:
+    jq: "[?(latest_version == 'true')]"
+  when: dump_latest | bool
+
+- name: Combine subjects and versions t3
+  set_fact:
+    subject_versions_t3: '{{ subject_versions_t2 }}'
+  when: dump_all | bool    
+
+- name: Get the schema json for the subjects 
+  uri:
+    url: "{{sr_server_url}}/subjects/{{item.subject_name}}/versions/{{item.version_id}}"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    return_content: yes
+    url_username: "{{sr_user}}"
+    url_password: "{{sr_user_password}}"
+   #client_cert: "{{ssl_file_path}}/{{host_cert_name}}"
+   #client_key: "{{ssl_file_path}}/{{host_key_name}}"
+    body_format: json
+  register: subject_jsons
+  loop: "{{ subject_versions_t3 }}"  
+  check_mode: no
+  delegate_to: "{{ target_host }}"
+
+- name: Combine subjects and versions t4
+  set_fact:     
+     subject_versions_t4: "{{ subject_versions_t4 | d([]) + subject_jsons.results|map(attribute='json') }}"
+
+
