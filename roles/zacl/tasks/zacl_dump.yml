@@ -5,7 +5,7 @@
 
 - name: Get All ACLs
   uri:
-    url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/acls"
+    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/acls"
     method: GET
     validate_certs: false
     force_basic_auth: true

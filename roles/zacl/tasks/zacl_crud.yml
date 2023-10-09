@@ -21,7 +21,7 @@
 
 - name: Delete ACLs
   uri:
-    url: "{{rest_server_url}}/kafka/v3/clusters/{{ cluster_id }}/acls?resource_name={{ item.resource_name }}\
+    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{ cluster_id }}/acls?resource_name={{ item.resource_name }}\
     &resource_type={{ item.resource_type }}&pattern_type={{ item.pattern_type }}&principal={{ item.principal }}\
     &host={{ item.host }}&operation={{ item.operation }}&permission={{ item.permission }}"
     method: "{{ http_method }}"

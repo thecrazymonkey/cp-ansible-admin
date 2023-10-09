@@ -2,7 +2,7 @@
 # Get cluster_id v1 API
 - name: Get cluster_id
   uri:
-    url: "{{rest_server_url}}/security/1.0/metadataClusterId"
+    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters"
     method: GET
     validate_certs: false
     force_basic_auth: true
@@ -14,5 +14,5 @@
   check_mode: no
 
 - set_fact:
-    cluster_id: "{{result.content}}"
+    cluster_id: "{{result.content | from_json | json_query('data[0].cluster_id')}}"
   check_mode: no
