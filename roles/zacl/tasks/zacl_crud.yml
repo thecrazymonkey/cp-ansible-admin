@@ -1,7 +1,7 @@
 ---
 - name: Add ACLs
   uri:
-    url: "{{rest_server_url}}/kafka/v3/clusters/{{ cluster_id }}/acls"
+    url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters/{{ cluster_id }}/acls"
     method: "{{ http_method }}"
     validate_certs: false
     force_basic_auth: true
@@ -16,12 +16,14 @@
     headers:
       Content-Type: application/json
     body_format: json
+  register: result
+  changed_when: result.status == http_status_code 
   loop: "{{ zacl_op_list }}"
   when: http_method == "POST"
 
 - name: Delete ACLs
   uri:
-    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{ cluster_id }}/acls?resource_name={{ item.resource_name }}\
+    url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters/{{ cluster_id }}/acls?resource_name={{ item.resource_name }}\
     &resource_type={{ item.resource_type }}&pattern_type={{ item.pattern_type }}&principal={{ item.principal }}\
     &host={{ item.host }}&operation={{ item.operation }}&permission={{ item.permission }}"
     method: "{{ http_method }}"
@@ -38,5 +40,7 @@
     headers:
       Content-Type: application/json
     body_format: json
+  register: result
+  changed_when: result.status == http_status_code
   loop: "{{ zacl_op_list }}"
   when: http_method == "DELETE"

@@ -3,7 +3,7 @@
 # delete reports success for topics that do not exist
 - name: Delete Topics
   uri:
-    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item}}"
+    url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item}}"
     method: DELETE
     validate_certs: false
     force_basic_auth: true
@@ -11,5 +11,6 @@
     url_password: "{{rest_user_password}}"
   register: result
   failed_when: result.status != 204 and result.json.error_code|int != 40403
+  changed_when: result.status == 204
   loop: "{{ topics_in }}"
  

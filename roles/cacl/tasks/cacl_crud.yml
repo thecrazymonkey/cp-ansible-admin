@@ -17,6 +17,8 @@
     headers:
       Content-Type: application/json
     body_format: json
+  register: result
+  changed_when: result.status == http_status_code    
   loop: "{{ cacl_op_list }}"
   when: http_method == "POST"
 
@@ -38,5 +40,7 @@
     headers:
       Content-Type: application/json
     body_format: json
+  register: result
+  changed_when: result.status == http_status_code
   loop: "{{ cacl_op_list }}"
   when: http_method == "DELETE"

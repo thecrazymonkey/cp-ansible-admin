@@ -2,7 +2,7 @@
 # Get cluster_id v1 API
 - name: Get cluster_id
   uri:
-    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters"
+    url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters"
     method: GET
     validate_certs: false
     force_basic_auth: true

@@ -5,7 +5,7 @@ all:
     rest_server_url: https://kafka1.confluent.io:8090
     rest_user: user
     rest_user_password: user-secret
-# get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn'      
+# get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn' or leave empty for automated discovery      
     cluster_id: 
 # properties for Kafka command line use - needed only for partitions_count increase and quota management     
     kafka_broker_hostname: kafka1.confluent.io
@@ -22,7 +22,7 @@ all:
     # partitions management disabled by default
     topic_partitions_enabled: false
     # prefix when embedded proxy is used
-    topic_cluster_prefix: "/kafka"
+    url_cluster_prefix: "/kafka"
     # list regex representing all topics you want to be left alone
     topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
     # regex representing whitelisted topics

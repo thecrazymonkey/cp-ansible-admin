@@ -12,7 +12,7 @@ topic_delete_enabled: false
 # partitions management TBD  
 topic_partitions_enabled: false
 # prefix when embedded proxy is used
-topic_cluster_prefix: "/kafka"
+
 # list regex representing all topics you want to be left alone
 topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
 # whitelisted
