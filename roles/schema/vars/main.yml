@@ -1,0 +1,23 @@
+---
+sr_internal_port: "8081"
+mtls: false
+tls_enabled: false  
+schema_delete_all: 'false'
+schema_delete_curr: 'false'
+schema_update: 'true'
+compatibility: 'BACKWARD'
+host_key_name: 'host.key'
+host_cert_name: 'host.crt'
+root_cert_name: 'ca.crt'
+ssl_file_path: '/home/ubuntu/'
+schema_dump_file: true
+schema_dump_destination: /home/ubuntu/Schema/schema_dump_out.yml
+topic_protected: ^_confluent.*|^_connect.*|^_ksql.*|^_schemas|^confluent.*
+# dump and restore settings
+dump_latest: true
+dump_all: false
+dump_only: false
+restore_only: false 
+restore_latest: true  
+
+

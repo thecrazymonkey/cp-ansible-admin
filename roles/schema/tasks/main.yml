@@ -1,0 +1,21 @@
+---
+- name: Schemas Override
+  include_tasks: schemas_override.yml
+
+- name: Dump Current Schemas
+  include_tasks: schemas_dump.yml   
+  when: not restore_only|bool  
+
+- name: Save Current Schemas
+  include_tasks: schemas_save.yml
+  when: 
+    - schemas_current|length > 0
+    - not restore_only|bool
+
+- name: Restore Current Schemas to a different cluster
+  include_tasks: schemas_restore.yml
+  when: restore_only|bool      
+
+- name: Schemas CRUD
+  include_tasks: schemas_manage.yml
+  when: not restore_only|bool and not dump_only|bool  

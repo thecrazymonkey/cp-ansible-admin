@@ -1,0 +1,681 @@
+---
+
+- name: Update to read write mode globally before updating the schemas
+  shell: |
+          mode_update="curl -X PUT --data '{\"mode\": \"{{ desired_mode }}\" }' -H \"Content-Type: application/vnd.schemaregistry.v1+json\" \
+          {{ curl_mode_api_url|trim }}/mode {{ curl_parameter_str  }}"
+          eval $mode_update
+  register: curl_result
+  failed_when: curl_result.stdout == ""
+  vars:
+    desired_mode: 'READWRITE'   
+
+- set_fact:
+     topics: "{{ schemas.topics }}"
+
+- debug:
+    msg: "{{ topics }}"  
+
+
+# Transformations or wrangling of Ansible variable followed by sufficx _t#     
+- set_fact:
+    topics_key_t0: "{{ topics_key_t0 | d([]) + [{'topic_name': item.name, 'key': item.key | combine ({'schema_delete_all': schema_delete_all
+      if item.key.schema_delete_all is not defined else item.key.schema_delete_all} ) | combine ({'schema_delete_curr': schema_delete_curr
+      if item.key.schema_delete_curr is not defined else item.key.schema_delete_curr} ) | combine ({'schema_update': schema_update
+      if item.key.schema_update is not defined else item.key.schema_update} ) | combine ({'compatibility': compatibility
+      if item.key.compatibility is not defined else item.key.compatibility})
+      |dict2items | rejectattr('key', 'equalto', 'record_schemas') |list
+      | items2dict }] }}"
+  loop: '{{ topics }}'   
+  when: item.key is defined and item.name | regex_search(topic_protected) == none
+
+- name: Set Schema Type Key
+  set_fact:
+     topics_key: "{{ topics_key|default([]) + [{'topic_name': item.topic_name, 'key': item.key|combine({'schema_type': _type|from_yaml})} ] }}"
+  loop: "{{ topics_key_t0 }}"
+  when: topics_key_t0 is defined and topics_key_t0 is iterable
+  vars:
+    _type: |
+      {% if '.avsc' in item.key.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.key.schema_file_src_path %}  
+      protobuf
+      {% else %}
+      json
+      {% endif %}
+
+- set_fact:
+    topics_value_t0: "{{ topics_value_t0 | d([]) + [{'topic_name': item.name, 'value': item.value | combine ({'schema_delete_all': schema_delete_all
+      if item.value.schema_delete_all is not defined else item.value.schema_delete_all} ) | combine ({'schema_delete_curr': schema_delete_curr
+      if item.value.schema_delete_curr is not defined else item.value.schema_delete_curr} ) | combine ({'schema_update': schema_update
+      if item.value.schema_update is not defined else item.value.schema_update} ) | combine ({'compatibility': compatibility
+      if item.value.compatibility is not defined else item.value.compatibility})
+      |dict2items | rejectattr('key', 'equalto', 'record_schemas') |list
+      | items2dict }] }}"
+  loop: '{{ topics }}'
+  when: item.value is defined and item.name | regex_search(topic_protected) == none
+
+- name: Set Schema Type Value
+  set_fact:
+     topics_value: "{{ topics_value|default([]) + [{'topic_name': item.topic_name, 'value': item.value|combine({'schema_type': _type|from_yaml})} ] }}"
+  loop: "{{ topics_value_t0 }}"
+  when: topics_value_t0 is defined and topics_value_t0 is iterable
+  vars:
+    _type: |
+      {% if '.avsc' in item.value.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.value.schema_file_src_path %}
+      protobuf
+      {% else %}
+      json
+      {% endif %}  
+
+- name: Combined topics value and key schema into a single list
+  set_fact:
+     combined_topics: "{{ [topics_key, topics_value]|
+                          community.general.lists_mergeby('topic_name',
+                                                  recursive=true,
+                                                  list_merge='append') }}"
+
+- name: Get Current Subjects
+  command: "{{ curl_req_get_subjects }}"
+  register: curl_result
+  failed_when: curl_result == 0
+  until: not curl_result.failed
+  retries: 5
+  delay: 1
+
+- debug:
+    var: curl_result
+
+- set_fact:
+    subject_list_curr: "{{ curl_result.stdout | trim }}"   
+
+- debug:
+    var: subect_list_curr
+
+- name: Delete all versions of the schemas for the existing subjects
+  shell: |
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/{{ item }} {{ curl_parameter_str | trim  }}
+  register: curl_result
+  with_items: "{{ subject_list_curr | d([]) }}"
+  when: delete_all_schemas|bool
+
+- name: Deliberate Fail
+  fail:
+    msg: "Deliberate Failing" 
+  when: delete_all_schemas|bool
+
+
+#Compatibility is updated first to allow for any schema change in the below steps
+- name: Update @topic level Compatibility Settings for the subjects - VALUE part
+  shell: |
+          topic={{ item.topic_name }}
+          curr_compatibility="curl -X PUT --data '{\"compatibility\": \"{{ item.value.compatibility }}\" }' -H \"Content-Type: application/vnd.schemaregistry.v1+json\" \
+          {{ curl_config_api_url|trim }}/${topic}-value {{ curl_parameter_str  }}"
+          eval $curr_compatibility
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.value is defined and item.value.schema_update|bool
+         and not (item.value.schema_delete_all|bool or item.value.schema_delete_curr|bool)) 
+
+
+- name: Update @topic level Compatibility Settings for the subjects - KEY part
+  shell: |
+          topic={{ item.topic_name }}
+          curr_compatibility="curl -X PUT --data '{\"compatibility\": \"{{ item.key.compatibility }}\" }' -H \"Content-Type: application/vnd.schemaregistry.v1+json\" \
+          {{ curl_config_api_url|trim }}/${topic}-key {{ curl_parameter_str  }}"
+          eval $curr_compatibility
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.key is defined and item.key.schema_update|bool
+         and not (item.key.schema_delete_all|bool or item.key.schema_delete_curr|bool))       
+
+- name: Register @topic level necessary AVRO schemas based on the input schemas file - VALUE part
+  shell: |
+          src_file_path_val={{ item.value.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val") 
+          topic={{ item.topic_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.value.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schema": "/' $tmpfile
+          sed -i '$ a "} ' $tmpfile
+          #Retrieve Old Schema
+          last_schema_version_before=$(curl -X GET {{ curl_subjects_api_url|trim }}/${topic}-value/versions/latest {{ curl_parameter_str  }})
+          #echo 'last schema before' $last_schema_version_before >> latestschema.txt
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-value/versions {{ curl_parameter_str  }} 
+          last_schema_version_after=$(curl -X GET {{ curl_subjects_api_url|trim }}/${topic}-value/versions/latest {{ curl_parameter_str  }})
+          #echo 'last schema after' $last_schema_version_after >> latestschema.txt
+          #if [ "$last_schema_version_before" = "$last_schema_version_after" ]; then
+          #   curl -X DELETE {{ curl_subjects_api_url|trim }}/${topic}-value/versions/latest {{ curl_parameter_str  }}
+          #fi;
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  failed_when: curl_result.stdout == "" 
+  when: (item.value is defined and item.value.schema_type == "avro" and item.value.schema_update|bool
+         and not (item.value.schema_delete_all|bool or item.value.schema_delete_curr|bool))  
+
+- name: Register @topic level necessary AVRO schemas based on the input schemas file - KEY part
+  shell: |
+          src_file_path_val={{ item.key.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.key.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schema": "/' $tmpfile
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-key/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.key is defined and item.key.schema_type == "avro" and item.key.schema_update|bool
+         and not (item.key.schema_delete_all|bool or item.key.schema_delete_curr|bool)) 
+
+- name: Register @topic level necessary PROTOBUF schemas based on the input schemas file - VALUE part
+  shell: |
+          src_file_path_val={{ item.value.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.value.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "PROTOBUF", "schema": "/' $tmpfile
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-value/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.value is defined and item.value.schema_type == "protobuf" and item.value.schema_update|bool
+         and not (item.value.schema_delete_all|bool or item.value.schema_delete_curr|bool))
+
+
+- name: Register @topic level necessary PROTOBUF schemas based on the input schemas file - KEY part
+  shell: |
+          src_file_path_val={{ item.key.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.key.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "PROTOBUF", "schema": "/' $tmpfile
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-key/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.key is defined and item.key.schema_type == "protobuf" and item.key.schema_update|bool
+         and not (item.key.schema_delete_all|bool or item.key.schema_delete_curr|bool))
+
+- name: Register @topic level necessary JSON schemas based on the input schemas file - VALUE part
+  shell: |
+          src_file_path_val={{ item.value.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.value.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "JSON", "schema": "/' $tmpfile
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-value/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.value is defined and item.value.schema_type == "json" and item.value.schema_update|bool
+         and not (item.value.schema_delete_all|bool or item.value.schema_delete_curr|bool))
+
+
+- name: Register @topic level necessary JSON schemas based on the input schemas file - KEY part
+  shell: |
+          src_file_path_val={{ item.key.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.key.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "JSON", "schema": "/' $tmpfile
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-key/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.key is defined and item.key.schema_type == "json" and item.key.schema_update|bool
+         and not (item.key.schema_delete_all|bool or item.key.schema_delete_curr|bool))         
+        
+
+- name: Delete Subjects @topic level - VALUE part - Delete Current Schema - High Precedence
+  shell: |  
+          topic={{ item.topic_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${topic}-value/versions/latest {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  when: (item.value is defined and item.value.schema_delete_curr|bool)
+
+- name: Delete Subjects @topic level - VALUE part - Delete All Schemas
+  shell: |  
+          topic={{ item.topic_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${topic}-value {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  when: (item.value is defined and item.value.schema_delete_all|bool and not item.value.schema_delete_curr|bool)
+
+- name: Delete Subjects @topic level - KEY part - Delete Current Schema - High Precedence
+  shell: |  
+          topic={{ item.topic_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${topic}-key/versions/latest {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  when: (item.key is defined and item.key.schema_delete_curr|bool)
+
+- name: Delete Subjects @topic level - KEY part - Delete All Schemas
+  shell: |  
+          topic={{ item.topic_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${topic}-key {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ combined_topics }}"
+  when: (item.key is defined and item.key.schema_delete_all|bool and not item.key.schema_delete_curr|bool)
+
+- name: Flatten the record schema arrays for keys
+  set_fact:
+     key_flat: "{{ key_flat | default([]) + [item.1|combine({'topic_name': item.0.name})|combine({'key_or_value': 'key'})|combine ({'schema_delete_all': schema_delete_all
+      if item.1.schema_delete_all is not defined else item.1.schema_delete_all} )|combine ({'schema_delete_curr': schema_delete_curr
+      if item.1.schema_delete_curr is not defined else item.1.schema_delete_curr} ) | combine ({'schema_update': schema_update
+      if item.1.schema_update is not defined else item.1.schema_update} ) | combine ({'compatibility': compatibility
+      if item.1.compatibility is not defined else item.1.compatibility})|combine(recursive=True)] }}"
+  loop: "{{ schemas.topics | d([]) | selectattr('key.record_schemas', 'defined') | subelements('key.record_schemas') }}"
+  when: item.0.key is defined and item.0.key.record_schemas is defined and item.0.name | regex_search(topic_protected) == none
+
+    
+- name: Set additional attributes to the flattened key arrays above based on conditions
+  set_fact:
+     key_flat_add: "{{ key_flat_add|default([]) + [item|combine({'delete_flag': _flag|from_yaml})|combine({'schema_type': _type|from_yaml}) ] }}"
+  loop: "{{ key_flat }}"
+  when: key_flat is iterable
+  vars:
+    _flag: |
+       {% if item.schema_delete_all|bool or item.schema_delete_curr|bool %}
+       true
+       {% else %}
+       false
+       {% endif %} 
+    _type: |
+      {% if '.avsc' in item.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.schema_file_src_path %}
+      protobuf
+      {% else %}
+      json
+      {% endif %}  
+
+- name: Flatten the record schema arrays for values
+  set_fact:
+      value_flat: "{{ value_flat | default([]) + [item.1|combine({'topic_name': item.0.name})|combine({'key_or_value': 'value'})|combine ({'schema_delete_all': schema_delete_all
+       if item.1.schema_delete_all is not defined else item.1.schema_delete_all} )|combine ({'schema_delete_curr': schema_delete_curr
+       if item.1.schema_delete_curr is not defined else item.1.schema_delete_curr} ) | combine ({'schema_update': schema_update
+       if item.1.schema_update is not defined else item.1.schema_update} ) | combine ({'compatibility': compatibility
+       if item.1.compatibility is not defined else item.1.compatibility})|combine(recursive=True)] }}"
+  loop: "{{ schemas.topics | d([]) | selectattr('value.record_schemas', 'defined') | subelements('value.record_schemas') }}"
+  when: item.0.value is defined and item.0.value.record_schemas is defined and item.0.name | regex_search(topic_protected) == none
+
+- name: Set additional attributes to the flattened value arrays above based on conditions
+  set_fact:
+     value_flat_add: "{{ value_flat_add|default([]) + [item|combine({'delete_flag': _flag|from_yaml})|combine({'schema_type': _type|from_yaml}) ] }}"
+  loop: "{{ value_flat }}"
+  when: value_flat is iterable
+  vars:
+    _flag: |
+       {% if item.schema_delete_all|bool or item.schema_delete_curr|bool %}
+       true
+       {% else %}
+       false
+       {% endif %}
+    _type: |
+      {% if '.avsc' in item.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.schema_file_src_path %}
+      protobuf
+      {% else %}
+      json
+      {% endif %}
+
+- name: Combine flattened record schemas for key and values
+  set_fact:
+      combined_flat: "{{ key_flat_add + value_flat_add  }}"   
+
+- name: Debug combined message
+  debug:
+    msg: "{{ combined_flat  }}"  
+
+- name: Update @topic record level Compatibility Settings for the subjects - VALUE part
+  shell: |
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          curr_compatibility="curl -X PUT --data '{\"compatibility\": \"{{ item.compatibility }}\" }' -H \"Content-Type: application/vnd.schemaregistry.v1+json\" \
+          {{ curl_config_api_url|trim }}/${topic}-${record_name}-value {{ curl_parameter_str  }}"
+          eval $curr_compatibility
+  register: curl_result
+  with_items: "{{ combined_flat_value }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_update|bool and not item.delete_flag|bool and combined_flat_value is iterable)
+  vars:
+    combined_flat_value: "{{ combined_flat|d([])|selectattr('key_or_value', 'equalto', 'value') }}"
+
+- name: Update @topic record level Compatibility Settings for the subjects - KEY part
+  shell: |
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          curr_compatibility="curl -X PUT --data '{\"compatibility\": \"{{ item.compatibility }}\" }' -H \"Content-Type: application/vnd.schemaregistry.v1+json\" \
+          {{ curl_config_api_url|trim }}/${topic}-${record_name}-key {{ curl_parameter_str  }}"
+          eval $curr_compatibility
+  register: curl_result
+  with_items: "{{ combined_key_value }}"
+  failed_when: curl_result.stdout == ""      
+  when: (item.schema_update|bool and not item.delete_flag|bool and combined_key_value is iterable)
+  vars:
+    combined_key_value: "{{ combined_flat|d([])|selectattr('key_or_value', 'equalto', 'key') }}"
+      
+
+- name: Register @topic record level necessary AVRO schemas based on the input schemas file - VALUE part
+  shell: |
+          src_file_path_val={{ item.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schema": "/' $tmpfile
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-value/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_flat_value }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_type == "avro" and item.schema_update|bool and not item.delete_flag|bool and combined_flat_value is iterable)
+  vars:
+    combined_flat_value: "{{ combined_flat|d([])|selectattr('key_or_value', 'equalto', 'value') }}"  
+
+
+- name: Register @topic record level necessary AVRO schemas based on the input schemas file - KEY part
+  shell: |
+          src_file_path_val={{ item.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schema": "/' $tmpfile
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-key/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_key_value }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_type == "avro" and item.schema_update|bool and not item.delete_flag|bool and combined_key_value is iterable)
+  vars:
+    combined_key_value: "{{ combined_flat|d([])|selectattr('key_or_value', 'equalto', 'key') }}"
+
+
+- name: Register @topic record level necessary PROTOBUF schemas based on the input schemas file - VALUE part
+  shell: |
+          src_file_path_val={{ item.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "PROTOBUF", "schema": "/' $tmpfile  
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-value/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_flat_value }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_type == "protobuf" and item.schema_update|bool and not item.delete_flag|bool and combined_flat_value is iterable)
+  vars:
+    combined_flat_value: "{{ combined_flat|d([])|selectattr('key_or_value', 'equalto', 'value') }}"
+
+
+- name: Register @topic record level necessary PROTOBUF schemas based on the input schemas file - KEY part
+  shell: |
+          src_file_path_val={{ item.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "PROTOBUF", "schema": "/' $tmpfile  
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-key/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_key_value }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_type == "protobuf" and item.schema_update|bool and not item.delete_flag|bool and combined_key_value is iterable)
+  vars:
+    combined_key_value: "{{ combined_flat|d([])|selectattr('key_or_value', 'equalto', 'key') }}"
+
+- name: Register @topic record level necessary JSON schemas based on the input schemas file - VALUE part
+  shell: |
+          src_file_path_val={{ item.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "JSON", "schema": "/' $tmpfile  
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-value/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_flat_value }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_type == "json" and item.schema_update|bool and not item.delete_flag|bool and combined_flat_value is iterable)
+  vars:
+    combined_flat_value: "{{ combined_flat|d([])|selectattr('key_or_value', 'equalto', 'value') }}"
+
+
+- name: Register @topic record level necessary JSON schemas based on the input schemas file - KEY part
+  shell: |
+          src_file_path_val={{ item.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "JSON", "schema": "/' $tmpfile  
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-key/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ combined_key_value }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_type == "json" and item.schema_update|bool and not item.delete_flag|bool and combined_key_value is iterable)
+  vars:
+    combined_key_value: "{{ combined_flat|d([])|selectattr('key_or_value', 'equalto', 'key') }}"
+      
+
+- name: Delete Subjects @topic record level - VALUE part - Delete Current Schema - High Precedence
+  shell: |
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-value/versions/latest {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ combined_flat }}"
+  when: (item.schema_delete_curr|bool and item.key_or_value == 'value' and combined_flat is iterable)
+
+- name: Delete Subjects @topic record level - VALUE part - Delete All Schemas
+  shell: |
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-value {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ combined_flat }}"
+  when: (item.schema_delete_all|bool and not item.schema_delete_curr|bool and item.key_or_value == 'value' and combined_flat is iterable)
+
+- name: Delete Subjects @topic record level - KEY part - Delete Current Schema - High Precedence
+  shell: |
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-key/versions/latest {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ combined_flat }}"
+  when: (item.schema_delete_curr|bool and item.key_or_value == 'key' and combined_flat is iterable)
+
+- name: Delete Subjects @topic record level - KEY part - Delete All Schemas
+  shell: |
+          topic={{ item.topic_name }}
+          record_name={{ item.record_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${topic}-${record_name}-key {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ combined_flat }}"
+  when: (item.schema_delete_all|bool and not item.schema_delete_curr|bool and item.key_or_value == 'key' and combined_flat is iterable)
+
+- set_fact:
+    record_schemas: "{{ record_schemas | d([]) + [item | combine ({'schema_delete_all': schema_delete_all
+      if item.schema_delete_all is not defined else item.schema_delete_all} ) | combine ({'schema_delete_curr': schema_delete_curr
+      if item.schema_delete_curr is not defined else item.schema_delete_curr} ) | combine ({'schema_update': schema_update
+      if item.schema_update is not defined else item.schema_update} ) | combine ({'compatibility': compatibility
+      if item.compatibility is not defined else item.compatibility}) | combine ({'schema_type': _type|from_yaml})] }}"
+  loop: '{{ schemas.record_schemas }}'
+  when: schemas.record_schemas is defined  
+  vars:
+    _type: |
+      {% if '.avsc' in item.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.schema_file_src_path %}
+      protobuf
+      {% else %}
+      json
+      {% endif %} 
+
+
+- name: Update @record level Compatibility Settings for the subjects
+  shell: |
+          record_name={{ item.record_name }}
+          curr_compatibility="curl -X PUT --data '{\"compatibility\": \"{{ item.compatibility }}\" }' -H \"Content-Type: application/vnd.schemaregistry.v1+json\" \
+          {{ curl_config_api_url|trim }}/${record_name} {{ curl_parameter_str  }}"
+          eval $curr_compatibility
+  register: curl_result
+  with_items: "{{ record_schemas }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_update|bool and not (item.schema_delete_all|bool or item.schema_delete_curr|bool) and record_schemas is iterable)
+
+- name: Register @record level necessary AVRO schemas
+  shell: |
+          src_file_path_val={{ item.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          record_name={{ item.record_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schema": "/' $tmpfile
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${record_name}/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ record_schemas }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_type == "avro" and item.schema_update|bool and not (item.schema_delete_all|bool or item.schema_delete_curr|bool) and record_schemas is iterable)
+
+- name: Register @record level necessary PROTOBUF schemas
+  shell: |
+          src_file_path_val={{ item.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          record_name={{ item.record_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "PROTOBUF", "schema": "/' $tmpfile  
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${record_name}/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ record_schemas }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_type == "protobuf" and item.schema_update|bool and not (item.schema_delete_all|bool or item.schema_delete_curr|bool) and record_schemas is iterable)
+
+- name: Register @record level necessary JSON schemas
+  shell: |
+          src_file_path_val={{ item.schema_file_src_path }}
+          last_dir_val=$(basename "$src_file_path_val")
+          record_name={{ item.record_name }}
+          tmpfile=$(mktemp)
+          cp {{ item.schema_file_src_path }} $tmpfile
+          sed -i 's/"/\\"/g' $tmpfile
+          sed -i '1s/^/{"schemaType": "JSON", "schema": "/' $tmpfile  
+          sed -i '$ a "} ' $tmpfile
+          curl -X POST --data @$tmpfile -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+          {{ curl_subjects_api_url|trim }}/${record_name}/versions {{ curl_parameter_str  }}
+          rm $tmpfile
+  register: curl_result
+  with_items: "{{ record_schemas }}"
+  failed_when: curl_result.stdout == ""
+  when: (item.schema_type == "json" and item.schema_update|bool and not (item.schema_delete_all|bool or item.schema_delete_curr|bool) and record_schemas is iterable)
+
+- name: Delete Subjects @record level - Delete Current Schema - High Precedence
+  shell: |
+          record_name={{ item.record_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${record_name}/versions/latest {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ record_schemas }}"  
+  when: (item.schema_delete_curr|bool and record_schemas is iterable)
+
+- name: Delete Subjects @record level - Delete All Schemas
+  shell: |
+          record_name={{ item.record_name }}
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/${record_name} {{ curl_parameter_str  }}
+  register: curl_result
+  with_items: "{{ record_schemas }}"
+  when: (item.schema_delete_all|bool and not item.schema_delete_curr|bool and record_schemas is iterable)    
+
+- name: Remove the Certificate Key File from the controller node
+  file:
+    path: '{{ key_file_path }}'
+    state: absent
+
+- name: Remove the Certificate File from the controller node
+  file:
+    path: '{{ crt_file_path }}'
+    state: absent
+
+- name: Remove the Root Certificate File from the controller node
+  file:
+    path: '{{ rootcrt_file_path }}'
+    state: absent
+      
+- name: Debug Subjects @topic level - VALUE part
+  debug:
+    msg: "{{ item  }}" 
+  with_items: "{{ combined_topics }}"
+  when: (item.value is defined
+         and (item.value.schema_delete_all|bool or item.value.schema_delete_curr|bool))         
+

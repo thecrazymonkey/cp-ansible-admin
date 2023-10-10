@@ -1,0 +1,93 @@
+---
+- name: SWITCH THE MODE TO IMPORT IN THE TARGET CLUSTER
+  uri:
+       url: "{{ curl_mode_api_url }}"
+       method: "PUT"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{sr_user}}"
+       url_password: "{{sr_user_password}}"
+       headers:
+        Content-Type: application/vnd.schemaregistry.v1+json
+       body_format: json
+       status_code: 200
+       body: "{ \"mode\": \"{{desired_mode}}\" }"  
+       return_content: yes
+  vars:
+       desired_mode: "IMPORT" 
+
+#- name: Deliberate Fail
+#  fail:
+#    msg: "Deliberate Failing"      
+
+- name: Debug
+  debug:
+    msg: "{{ schemas|groupby('subject')  }}"  
+
+- name: Group By Subjects
+  set_fact:
+      schemas_def_t1: '{{ schemas_def_t1 | default([]) + [item.1|sort(attribute="version")|last] }}'
+  loop: "{{ schemas|groupby('subject')  }}"
+  when: restore_latest|bool
+
+- name: Group By Subjects
+  set_fact:
+      schemas_def_t1: '{{ schemas_def_t1 | default([]) + [item.1] }}'
+  loop: "{{ schemas|groupby('subject')  }}"
+  when: not restore_latest|bool    
+
+- name: Debug
+  debug:
+    msg: "{{ schemas_def_t1|flatten  }}"   
+
+- name: Flatten
+  set_fact:
+      schemas_def_t2: "{{ schemas_def_t1|flatten  }}" 
+
+#MERGE SCHEMA TYPE
+
+- name: MERGE SCHEMA TYPE
+  set_fact:
+       schemas_def_t3: '{{ schemas_def_t3 | default([]) + [item1] }}'
+  with_items: "{{ schemas_def_t2 }}"
+  vars:
+       item1: '{{ item if item.schemaType is defined else item|combine({"schemaType": "AVRO"}) }}'  
+
+- name: Debug
+  debug:
+    msg: "{{ schemas_def_t3  }}"   
+
+- name: Manage Rolebindings For Principal, Scope and Set of resources
+  uri:
+       url: "{{ sr_server_url }}/subjects/{{item.subject}}/versions"
+       method: "POST"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{sr_user}}"
+       url_password: "{{sr_user_password}}"
+       headers:
+        Content-Type: application/vnd.schemaregistry.v1+json 
+       body_format: json
+       status_code: 200
+       body: "{{body_item | to_json | from_json}}"
+       return_content: yes    
+  loop: "{{ schemas_def_t3 }}"
+  vars:
+       body_item: "{{ item| dict2items | rejectattr('key', 'equalto', 'subject') |list | items2dict }}"  
+   
+- name: SWITCH THE MODE BACK TO READWRITE IN THE TARGET CLUSTER
+  uri:
+       url: "{{ curl_mode_api_url }}"
+       method: "PUT"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{sr_user}}"
+       url_password: "{{sr_user_password}}"
+       headers:
+        Content-Type: application/vnd.schemaregistry.v1+json
+       body_format: json
+       status_code: 200
+       body: "{ \"mode\": \"{{desired_mode}}\" }"
+       return_content: yes
+  vars:
+       desired_mode: "READWRITE"       

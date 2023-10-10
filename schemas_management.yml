@@ -1,0 +1,11 @@
+---
+- name: Schema Management
+  gather_facts: false
+  hosts: localhost
+  environment: "{{ proxy_env }}"
+
+  tasks:
+
+   - name: Process Schemas
+     import_role:
+        name: schema  
