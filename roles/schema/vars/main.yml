@@ -1,15 +1,17 @@
 ---
 sr_internal_port: "8081"
+#sr_internal_port: "8083"  
 mtls: false
-tls_enabled: false  
+tls_enabled: true
 schema_delete_all: 'false'
 schema_delete_curr: 'false'
 schema_update: 'true'
 compatibility: 'BACKWARD'
 host_key_name: 'host.key'
 host_cert_name: 'host.crt'
-root_cert_name: 'ca.crt'
-ssl_file_path: '/home/ubuntu/'
+#root_cert_name: 'ca.crt'
+root_cert_name: 'ca-cert.pem'  
+ssl_file_path: '/var/ssl/private'
 schema_dump_file: true
 schema_dump_destination: /home/ubuntu/Schema/schema_dump_out.yml
 topic_protected: ^_confluent.*|^_connect.*|^_ksql.*|^_schemas|^confluent.*

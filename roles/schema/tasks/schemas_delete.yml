@@ -1,0 +1,179 @@
+- name: Delete @ Topic Level
+  block:
+
+   - name: Delete Subjects @topic level - VALUE part - Delete Current Schema - High Precedence
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ itemin.topic_name }}-value/versions/latest"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code 
+     #failed_when: result.status != 200 or result.status != 404    
+     when: (itemin.value is defined and itemin.value.schema_delete_curr|bool)  
+
+
+   - name: Delete Subjects @topic level - VALUE part - Delete All Schemas
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ itemin.topic_name }}-value"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.value is defined and itemin.value.schema_delete_all|bool and not itemin.value.schema_delete_curr|bool)
+
+   - name: Delete Subjects @topic level - KEY part - Delete Current Schema - High Precedence
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ itemin.topic_name }}-key/versions/latest"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.key is defined and itemin.key.schema_delete_curr|bool)
+
+
+   - name: Delete Subjects @topic level - KEY part - Delete All Schemas
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ itemin.topic_name }}-key"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.key is defined and itemin.key.schema_delete_all|bool and not itemin.key.schema_delete_curr|bool)
+  when: level_set == "topic"    
+
+- name: Delete @ Topic Record Level
+  block:
+
+   - name: Delete Subjects @topic record level - VALUE part - Delete Current Schema - High Precedence
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ item.topic_name + '-' + item.record_name }}-value/versions/latest"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code  
+     when: (itemin.key_or_value == "value" and itemin.schema_delete_curr|bool)  
+
+
+   - name: Delete Subjects @topic record level - VALUE part - Delete All Schemas
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ item.topic_name + '-' + item.record_name }}-value"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.key_or_value == "value" and itemin.schema_delete_all|bool and not itemin.schema_delete_curr|bool)
+
+   - name: Delete Subjects @topic record level - KEY part - Delete Current Schema - High Precedence
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ item.topic_name + '-' + item.record_name }}-key/versions/latest"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.key_or_value == "key" and itemin.schema_delete_curr|bool)
+
+   - name: Delete Subjects @topic record level - KEY part - Delete All Schemas
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ item.topic_name + '-' + item.record_name }}-key"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.key_or_value == "key" and itemin.schema_delete_all|bool and not itemin.schema_delete_curr|bool)
+  when: level_set == "topicrecord"
+
+
+- name: Delete @ Record Level
+  block:
+
+   - name: Delete Subjects @record level - Delete Current Schema - High Precedence
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ item.record_name }}/versions/latest"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.schema_delete_curr|bool)
+
+
+   - name: Delete Subjects @record level  - Delete All Schemas
+     uri:
+       url: "{{ curl_subjects_api_url|trim }}/{{ item.record_name }}"
+       method: "DELETE"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+      #headers:
+         #Content-Type: application/vnd.schemaregistry.v1+json
+       status_code: 200
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.schema_delete_all|bool and not itemin.schema_delete_curr|bool) 
+  when: level_set == "record"
+       
+       

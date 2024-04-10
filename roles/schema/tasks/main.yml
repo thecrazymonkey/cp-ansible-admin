@@ -17,5 +17,5 @@
   when: restore_only|bool      
 
 - name: Schemas CRUD
-  include_tasks: schemas_manage.yml
+  include_tasks: schemas_manage_uri.yml
   when: not restore_only|bool and not dump_only|bool  

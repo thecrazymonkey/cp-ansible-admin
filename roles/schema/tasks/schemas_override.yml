@@ -22,7 +22,7 @@
   set_fact:
        sr_server_url: "{{ protocol + groups[target_group][0] + ':' + sr_internal_port }}"
   vars:
-    target_group: schema_registry  
+    target_group: schema_registry 
 
 - name: Fetch Certificate Key Files from Remote Node to Controller for mTLS scenarios
   run_once: yes
