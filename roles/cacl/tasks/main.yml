@@ -1,4 +1,8 @@
 ---
+- name: Determine the cluster_id
+  include_tasks: roles/common/tasks/_cluster_id.yml
+  when: cluster_id |d('',true)|length == 0
+
 - name: Dump Centralized ACLs
   include_tasks: cacl_dump.yml
   vars:

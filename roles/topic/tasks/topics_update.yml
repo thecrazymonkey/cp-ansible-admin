@@ -2,7 +2,7 @@
 # Low level topic operations - using Confluent Server v3 API
 - name: Update topics
   uri:
-    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/configs:alter"
+    url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}/configs:alter"
     method: POST
     validate_certs: false
     force_basic_auth: true
@@ -16,5 +16,7 @@
         "data" :{{item.configs| to_json | from_json}}
       }
     status_code: 204
+  register: result
+  changed_when: result.status == 204
   loop: "{{ topics_in |flatten(levels=1) }}"
 

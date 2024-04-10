@@ -2,7 +2,7 @@
 # Low level topic operations - using Confluent Server v3 API - once it gets merged
 - name: Add partitions
   uri:
-    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}"
+    url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}"
     method: PATCH
     validate_certs: false
     force_basic_auth: true
@@ -12,6 +12,7 @@
     body: "{ \"partitions_count\": {{item.partitions_count}} }"
     status_code: [200,405]
   register: _result
+  changed_when: _result.status == 200
   loop: "{{ topics_in }}"
 
 - debug:

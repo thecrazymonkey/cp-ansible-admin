@@ -3,7 +3,7 @@
 # create topic expects collection to topic configs, returns success for already existing topics
 - name: Create topics
   uri:
-    url: "{{rest_server_url}}{{topic_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics"
+    url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics"
     method: POST
     validate_certs: false
     force_basic_auth: true
@@ -16,5 +16,6 @@
     return_content: yes
   register: result
   failed_when: result.status != 201 and result.json.error_code|int != 40002
+  changed_when: result.status == 201
   loop: "{{topics_in |flatten(levels=1)}}"
   

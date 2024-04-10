@@ -9,4 +9,5 @@ binary_base_path: /home/confluent/confluent-7.0.1
 cluster_id: ""
 proxy_env: {}
 acl_delete_enabled: true
+url_cluster_prefix: "/kafka"
 
