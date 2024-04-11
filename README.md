@@ -419,4 +419,16 @@ schemas: <br>
              schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc"<br>
         - name: _confluent-internal # We can protect the schema of internal topics from being modified...So the mentioned topic will not have any effect when running the process<br>
          value:<br>
-             schema_file_src_path: "/home/ubuntu/Schema/internalvalue.avsc"    
+             schema_file_src_path: "/home/ubuntu/Schema/internalvalue.avsc"  
+
+###### Backup and Restore Schemas
+
+Back up Schemas in an existing cluster setting the dump_only variable to true
+
+/*ansible-playbook --private-key ${PRIV_KEY_FILE} -i mrchostsrbacmetric.yml --extra-vars "@./schemadef.yml" --extra-vars "dump_only=true" schemas_management.yml -vvvv*/
+
+Restore  Schemas in an new cluster setting the restore_only=truevariable to true
+
+ansible-playbook --private-key ${PRIV_KEY_FILE} -i mrchostsrbacdata.yml --extra-vars "@./schema_dump_out.yml"  --extra-vars "restore_only=true" schemas_management.yml -vvvv
+
+
