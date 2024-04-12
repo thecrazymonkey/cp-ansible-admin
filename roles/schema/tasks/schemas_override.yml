@@ -26,35 +26,35 @@
 
 - name: Fetch Certificate Key Files from Remote Node to Controller for mTLS scenarios
   run_once: yes
-  fetch: src={{ ssl_file_path }}/{{host_key_name}} dest=/tmp/ flat=yes
+  fetch: src={{ ssl_file_path }}/{{host_key_name}} dest={{ local_ssl_file_path }} flat=yes
   when: mtls|bool
   delegate_to: "{{ target_host }}"
 
 - name: Fetch Certificate Cert Files from Remote Node to Controller for mTLS scenarios
   run_once: yes
-  fetch: src={{ ssl_file_path }}/{{host_cert_name}} dest=/tmp/ flat=yes
+  fetch: src={{ ssl_file_path }}/{{host_cert_name}} dest={{ local_ssl_file_path }} flat=yes
   when: mtls|bool
   delegate_to: "{{ target_host }}"
 
 - name: Fetch Root Certificate Files from Remote Node to Controller for mTLS scenarios
   run_once: yes
-  fetch: src={{ ssl_file_path }}/{{root_cert_name}} dest=/tmp/ flat=yes
+  fetch: src={{ ssl_file_path }}/{{root_cert_name}} dest={{ local_ssl_file_path }} flat=yes
   when: mtls|bool or tls_enabled|bool
   delegate_to: "{{ target_host }}"
 
 - name: set key file path
   set_fact:
-    key_file_path: /tmp/{{host_key_name}}
+    key_file_path: {{ local_ssl_file_path }}/{{host_key_name}}
   when: mtls|bool
 
 - name: set cert file path
   set_fact:
-    crt_file_path: /tmp/{{host_cert_name}}
+    crt_file_path: {{ local_ssl_file_path }}/{{host_cert_name}}
   when: mtls|bool
 
 - name: set root cert path
   set_fact:
-    rootcrt_file_path: /tmp/{{root_cert_name}}
+    rootcrt_file_path: {{ local_ssl_file_path }}/{{root_cert_name}}
   when: mtls|bool or tls_enabled|bool
 
 - set_fact:
