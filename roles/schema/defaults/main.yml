@@ -1,6 +1,5 @@
 ---
 # connectivity variables
-sr_port: 8081  
 proxy_env: {}
 ansible_fqdn: ""
 topic_protected: ^_confluent.*|^_connect.*|^_ksql.*|^_schemas|^confluent.*
