@@ -1,0 +1,436 @@
+- name: Set @ Topic Level
+  block:
+
+   - name: Update Compatibilty - Value Part
+     uri:
+       url: "{{ curl_config_api_url|trim }}/{{ itemin.topic_name }}-value"
+       method: "PUT"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+       headers:
+        Content-Type: application/vnd.schemaregistry.v1+json
+       body_format: json
+       status_code: 200
+       body: '{"compatibility": "{{ itemin.value.compatibility }}" }'  
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code    
+     when: (itemin.value is defined and itemin.value.schema_update|bool
+           and not (itemin.value.schema_delete_all|bool or itemin.value.schema_delete_curr|bool))    
+
+   - name: Update Compatibilty - Key Part
+     uri:
+       url: "{{ curl_config_api_url|trim }}/{{ itemin.topic_name  }}-key"
+       method: "PUT"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+       headers:
+        Content-Type: application/vnd.schemaregistry.v1+json
+       body_format: json
+       status_code: 200
+       body: '{"compatibility": "{{ itemin.key.compatibility }}" }'  
+       return_content: yes  
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.key is defined and itemin.key.schema_update|bool
+           and not (itemin.key.schema_delete_all|bool or itemin.key.schema_delete_curr|bool)) 
+
+#Use Block Here
+#Create/Update Schema Value Part
+   - name: Set Schema Value
+# check the resources to add
+     block:
+
+       - name: debug file path
+         debug:
+           msg: "{{ itemin.value.schema_file_src_path  }}" 
+
+       - name: Slurp var from file
+    # delegate_to: localhost # if necessary
+         slurp:
+           src: "{{ itemin.value.schema_file_src_path  }}"
+         register: file_content
+
+       - name: Decode Non Protobuf
+         set_fact:
+           file_content_decoded: "{{ file_content['content'] | b64decode  }}"
+         when: itemin.value.schema_type|upper != "PROTOBUF" 
+
+       - name: Decode Protobuf
+         set_fact:
+           file_content_decoded: "{{ file_content['content'] | b64decode | replace('\"','\\\"')  }}"
+         when: itemin.value.schema_type|upper == "PROTOBUF"
+
+       - name: Decode Protobuf Further
+         set_fact:
+           file_content_decoded1: "{{ file_content_decoded | replace('\n', '')  }}"      
+         when: itemin.value.schema_type|upper == "PROTOBUF"
+
+       #- name: Deliberate Fail
+      #   fail:
+      #    msg: "Deliberate Failing"      
+
+       - name: Debug 
+         debug: 
+           var: file_content_decoded1   
+
+       - name: Set Body String Non ProtoBuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.value.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded  | to_json | replace('\"','\\\"') }}\" }"      
+         when: itemin.value.schema_type|upper != "PROTOBUF"
+
+       - name: Set Body String Protobuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.value.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded1  }}\" }"
+         when: itemin.value.schema_type|upper == "PROTOBUF"     
+
+       - name: Register Schemas
+         uri:
+           url: "{{ curl_subjects_api_url|trim }}/{{ itemin.topic_name  }}-value/versions"
+           method: "POST"
+           validate_certs: false
+           force_basic_auth: true
+           url_username: "{{ sr_user }}"
+           url_password: "{{ sr_user_password }}"
+           headers:
+            Content-Type: application/vnd.schemaregistry.v1+json
+           body_format: json
+           status_code: 200
+           #body:  "{ \"schemaType\": \"{{ itemin.value.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded  | to_json | replace('\"','\\\"') }}\" }"
+           #body:  "{ \"schemaType\": \"{{ itemin.value.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded | replace('\n', '') | trim  }} \" }"  
+           body: '{{ body_str }}'
+           return_content: yes
+         register: result
+         changed_when: result.status == http_status_code    
+     when: (item.value is defined and item.value.schema_update|bool
+             and not (item.value.schema_delete_all|bool or item.value.schema_delete_curr|bool))    
+
+   - name: Set Schema Key
+# check the resources to add
+     block:
+
+       - name: Slurp var from file
+    # delegate_to: localhost # if necessary
+         slurp:
+           src: "{{ itemin.key.schema_file_src_path  }}"
+         register: file_content
+
+       - name: Decode Non Protobuf
+         set_fact:
+          file_content_decoded: "{{ file_content['content'] | b64decode  }}"
+         when: itemin.key.schema_type|upper != "PROTOBUF"
+
+       - name: Decode Protobuf
+         set_fact:
+          file_content_decoded: "{{ file_content['content'] | b64decode | replace('\"','\\\"')  }}"
+         when: itemin.key.schema_type|upper == "PROTOBUF"
+
+       - name: Decode Protobuf Further
+         set_fact:
+          file_content_decoded1: "{{ file_content_decoded | replace('\n', '')  }}"
+         when: itemin.key.schema_type|upper == "PROTOBUF"
+
+      #- name: Deliberate Fail
+      #   fail:
+      #    msg: "Deliberate Failing"      
+
+       - name: Debug
+         debug:
+           var: file_content_decoded1
+
+       - name: Set Body String Non ProtoBuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.key.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded  | to_json | replace('\"','\\\"') }}\" }"
+         when: itemin.key.schema_type|upper != "PROTOBUF"
+
+       - name: Set Body String Protobuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.key.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded1  }}\" }"
+         when: itemin.key.schema_type|upper == "PROTOBUF"    
+
+       - name: Register Schemas
+         uri:
+           url: "{{ curl_subjects_api_url|trim }}/{{ itemin.topic_name  }}-key/versions"
+           method: "POST"
+           validate_certs: false
+           force_basic_auth: true
+           url_username: "{{ sr_user }}"
+           url_password: "{{ sr_user_password }}"
+           headers:
+            Content-Type: application/vnd.schemaregistry.v1+json
+           body_format: json
+           status_code: 200
+          #body:  "{ \"schemaType\": \"{{ itemin.key.schema_type|upper }}\", \"schema\": \"{{file_content_decoded | to_json | replace('\"','\\\"') }}\" }"
+           body: '{{ body_str }}'
+           return_content: yes
+         register: result
+         changed_when: result.status == http_status_code
+     when: (item.key is defined and item.key.schema_update|bool
+             and not (item.key.schema_delete_all|bool or item.key.schema_delete_curr|bool))
+  when: level_set == "topic" 
+
+- name: Set @ Topic Record Level
+  block:
+
+   - name: Update Compatibilty - Value Part
+     uri:
+       url: "{{ curl_config_api_url|trim }}/{{ item.topic_name + '-' + item.record_name }}-value"
+       method: "PUT"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+       headers:
+        Content-Type: application/vnd.schemaregistry.v1+json
+       body_format: json
+       status_code: 200
+       body: '{"compatibility": "{{ itemin.compatibility }}" }'
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.key_or_value == "value" and itemin.schema_update|bool
+           and not (itemin.schema_delete_all|bool or itemin.schema_delete_curr|bool))
+
+   - name: Update Compatibilty - Key Part
+     uri:
+       url: "{{ curl_config_api_url|trim }}/{{ item.topic_name + '-' + item.record_name  }}-key"
+       method: "PUT"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+       headers:
+        Content-Type: application/vnd.schemaregistry.v1+json
+       body_format: json
+       status_code: 200
+       body: '{"compatibility": "{{ itemin.compatibility }}" }'
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.key_or_value == "key" and itemin.schema_update|bool
+           and not (itemin.schema_delete_all|bool or itemin.schema_delete_curr|bool))
+
+#Use Block Here
+#Create/Update Schema Value Part
+   - name: Set Schema Value
+# check the resources to add
+     block:
+
+       - name: debug file path
+         debug:
+           msg: "{{ itemin.schema_file_src_path  }}"
+
+       - name: Slurp var from file
+    # delegate_to: localhost # if necessary
+         slurp:
+           src: "{{ itemin.schema_file_src_path  }}"
+         register: file_content
+    
+       - name: Decode Non Protobuf
+         set_fact:
+           file_content_decoded: "{{ file_content['content'] | b64decode  }}"
+         when: itemin.schema_type|upper != "PROTOBUF"
+
+       - name: Decode Protobuf
+         set_fact:
+           file_content_decoded: "{{ file_content['content'] | b64decode | replace('\"','\\\"')  }}"
+         when: itemin.schema_type|upper == "PROTOBUF"
+
+       - name: Decode Protobuf Further
+         set_fact:
+           file_content_decoded1: "{{ file_content_decoded | replace('\n', '')  }}"
+         when: itemin.schema_type|upper == "PROTOBUF"
+
+       #- name: Deliberate Fail
+      #   fail:
+      #    msg: "Deliberate Failing"      
+
+       - name: Debug
+         debug:
+           var: file_content_decoded1
+
+       - name: Set Body String Non ProtoBuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded  | to_json | replace('\"','\\\"') }}\" }"
+         when: itemin.schema_type|upper != "PROTOBUF"
+
+       - name: Set Body String Protobuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded1  }}\" }"
+         when: itemin.schema_type|upper == "PROTOBUF"
+
+       - name: Register Schemas
+         uri:
+           url: "{{ curl_subjects_api_url|trim }}/{{ item.topic_name + '-' + item.record_name  }}-value/versions"
+           method: "POST"
+           validate_certs: false
+           force_basic_auth: true
+           url_username: "{{ sr_user }}"
+           url_password: "{{ sr_user_password }}"
+           headers:
+            Content-Type: application/vnd.schemaregistry.v1+json
+           body_format: json
+           status_code: 200
+           #body:  "{ \"schemaType\": \"{{ itemin.value.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded  | to_json | replace('\"','\\\"') }}\" }"
+           #body:  "{ \"schemaType\": \"{{ itemin.value.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded | replace('\n', '') | trim  }} \" }"  
+           body: '{{ body_str }}'
+           return_content: yes
+         register: result
+         changed_when: result.status == http_status_code
+     when: (itemin.key_or_value == "value" and item.schema_update|bool
+             and not (item.schema_delete_all|bool or item.schema_delete_curr|bool))
+
+   - name: Set Schema Key
+# check the resources to add
+     block:
+
+       - name: Slurp var from file
+    # delegate_to: localhost # if necessary
+         slurp:
+           src: "{{ itemin.schema_file_src_path  }}"
+         register: file_content
+
+       - name: Decode Non Protobuf
+         set_fact:
+          file_content_decoded: "{{ file_content['content'] | b64decode  }}"
+         when: itemin.schema_type|upper != "PROTOBUF"
+
+       - name: Decode Protobuf
+         set_fact:
+          file_content_decoded: "{{ file_content['content'] | b64decode | replace('\"','\\\"')  }}"
+         when: itemin.schema_type|upper == "PROTOBUF"
+
+       - name: Decode Protobuf Further
+         set_fact:
+          file_content_decoded1: "{{ file_content_decoded | replace('\n', '')  }}"
+         when: itemin.schema_type|upper == "PROTOBUF"
+
+      #- name: Deliberate Fail
+      #   fail:
+      #    msg: "Deliberate Failing"      
+
+       - name: Debug
+         debug:
+           var: file_content_decoded1
+
+       - name: Set Body String Non ProtoBuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded  | to_json | replace('\"','\\\"') }}\" }"
+         when: itemin.schema_type|upper != "PROTOBUF"
+
+       - name: Set Body String Protobuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded1  }}\" }"
+         when: itemin.schema_type|upper == "PROTOBUF"
+
+       - name: Register Schemas
+         uri:
+           url: "{{ curl_subjects_api_url|trim }}/{{ item.topic_name + '-' + item.record_name  }}-key/versions"
+           method: "POST"
+           validate_certs: false
+           force_basic_auth: true
+           url_username: "{{ sr_user }}"
+           url_password: "{{ sr_user_password }}"
+           headers:
+            Content-Type: application/vnd.schemaregistry.v1+json
+           body_format: json
+           status_code: 200
+          #body:  "{ \"schemaType\": \"{{ itemin.key.schema_type|upper }}\", \"schema\": \"{{file_content_decoded | to_json | replace('\"','\\\"') }}\" }"
+           body: '{{ body_str }}'
+           return_content: yes
+         register: result
+         changed_when: result.status == http_status_code
+     when: (itemin.key_or_value == "key" and item.schema_update|bool
+             and not (item.schema_delete_all|bool or item.schema_delete_curr|bool))
+  when: level_set == "topicrecord"
+            
+
+- name: Set @ Record Level
+  block:
+
+   - name: Update Compatibilty Part
+     uri:
+       url: "{{ curl_config_api_url|trim }}/{{ item.record_name }}"
+       method: "PUT"
+       validate_certs: false
+       force_basic_auth: true
+       url_username: "{{ sr_user }}"
+       url_password: "{{ sr_user_password }}"
+       headers:
+        Content-Type: application/vnd.schemaregistry.v1+json
+       body_format: json
+       status_code: 200
+       body: '{"compatibility": "{{ itemin.compatibility }}" }'
+       return_content: yes
+     register: result
+     changed_when: result.status == http_status_code
+     when: (itemin.schema_update|bool
+           and not (itemin.schema_delete_all|bool or itemin.schema_delete_curr|bool)) 
+
+   - name: Set Schema
+# check the resources to add
+     block:
+
+       - name: Slurp var from file
+    # delegate_to: localhost # if necessary
+         slurp:
+           src: "{{ itemin.schema_file_src_path  }}"
+         register: file_content
+
+       - name: Decode Non Protobuf
+         set_fact:
+          file_content_decoded: "{{ file_content['content'] | b64decode  }}"
+         when: itemin.schema_type|upper != "PROTOBUF"
+
+       - name: Decode Protobuf
+         set_fact:
+          file_content_decoded: "{{ file_content['content'] | b64decode | replace('\"','\\\"')  }}"
+         when: itemin.schema_type|upper == "PROTOBUF"
+
+       - name: Decode Protobuf Further
+         set_fact:
+          file_content_decoded1: "{{ file_content_decoded | replace('\n', '')  }}"
+         when: itemin.schema_type|upper == "PROTOBUF"
+
+      #- name: Deliberate Fail
+      #   fail:
+      #    msg: "Deliberate Failing"      
+
+       - name: Debug
+         debug:
+           var: file_content_decoded1
+
+       - name: Set Body String Non ProtoBuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded  | to_json | replace('\"','\\\"') }}\" }"
+         when: itemin.schema_type|upper != "PROTOBUF"
+
+       - name: Set Body String Protobuf
+         set_fact:
+            body_str: "{ \"schemaType\": \"{{ itemin.schema_type|upper }}\", \"schema\": \"{{ file_content_decoded1  }}\" }"
+         when: itemin.schema_type|upper == "PROTOBUF"
+
+       - name: Register Schemas
+         uri:
+           url: "{{ curl_subjects_api_url|trim }}/{{ item.record_name  }}/versions"
+           method: "POST"
+           validate_certs: false
+           force_basic_auth: true
+           url_username: "{{ sr_user }}"
+           url_password: "{{ sr_user_password }}"
+           headers:
+            Content-Type: application/vnd.schemaregistry.v1+json
+           body_format: json
+           status_code: 200
+          #body:  "{ \"schemaType\": \"{{ itemin.key.schema_type|upper }}\", \"schema\": \"{{file_content_decoded | to_json | replace('\"','\\\"') }}\" }"
+           body: '{{ body_str }}'
+           return_content: yes
+         register: result
+         changed_when: result.status == http_status_code
+     when: (item.schema_update|bool
+             and not (item.schema_delete_all|bool or item.schema_delete_curr|bool))
+  when: level_set == "record"           

@@ -1,0 +1,32 @@
+---
+- name: Get Current Subjects
+  uri:
+    url: "{{sr_server_url}}/subjects"
+    method: GET
+    validate_certs: false
+    force_basic_auth: true
+    return_content: yes  
+    url_username: "{{sr_user}}"
+    url_password: "{{sr_user_password}}"
+   #client_cert: "{{ssl_file_path}}/{{host_cert_name}}"
+   #client_key: "{{ssl_file_path}}/{{host_key_name}}"
+    body_format: json
+  register: subject_list
+  check_mode: no
+  delegate_to: "{{ target_host }}" 
+
+- name: Get Subject List
+  set_fact: 
+    sub_list: '{{ subject_list.json }}'
+
+- name: Get Versions and version schemas
+  include_tasks: tasks/schemas_dump_helper.yml
+  loop: "{{ sub_list  }}"    
+  loop_control:
+    loop_var: item_subject
+  when: sub_list|length > 0
+
+- name: Set Schemas Current
+  set_fact: 
+    schemas_current: '{{ subject_versions_t4 }}'
+  when: sub_list|length > 0

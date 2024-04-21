@@ -1,0 +1,55 @@
+---
+# connectivity variables
+proxy_env: {}
+ansible_fqdn: ""
+topic_protected: ^_confluent.*|^_connect.*|^_ksql.*|^_schemas|^confluent.*
+topics_key_t0: []
+topics_value_t0: []
+topics_key: []
+topics_value: []
+key_flat: []
+key_flat_add: []
+value_flat: []
+value_flat_add: []
+Combined_flat: []
+sub_list: []
+schemas_current: []
+record_schemas: []  
+key_file_path: ""
+crt_file_path: ""
+rootcrt_file_path: ""
+delete_all_schemas: false  
+local_ssl_file_path: '/tmp'
+sr_internal_port: "8081"
+mtls: false
+tls_enabled: true
+schema_delete_all: 'false'
+schema_delete_curr: 'false'
+schema_update: 'true'
+compatibility: 'BACKWARD'
+host_key_name: 'host.key'
+host_cert_name: 'host.crt'
+#root_cert_name: 'ca.crt'
+root_cert_name: 'ca-cert.pem'
+ssl_file_path: '/var/ssl/private'  
+schema_dump_file: true
+schema_dump_destination: /tmp/schema_dump_out.yml
+# dump and restore settings
+dump_latest: true
+dump_all: false
+dump_only: false
+restore_only: false
+restore_latest: true  
+
+schemas:
+  records_schemas:
+    - record_name: "samplerecordonly"
+      compatibility: "BACKWARD"
+      schema_file_src_path: "samplerecordonlyavro.avsc"
+  topics:
+    - name: test
+      key:
+        schema_file_src_path: "/home/<user>/testkey.avsc"
+      value:
+        schema_file_src_path: "/home/<user>/testvalue.avsc"
+      

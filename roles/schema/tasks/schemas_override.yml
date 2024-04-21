@@ -1,0 +1,93 @@
+---
+- set_fact:
+    sr_user: "{{ schema_registry_ldap_user if schema_registry_ldap_user is defined else sasl_plain_users.schema_registry.principal  }}"
+
+- set_fact:
+    sr_user_password: "{{ schema_registry_ldap_password if schema_registry_ldap_password is defined else sasl_plain_users.schema_registry.password  }}"    
+
+- set_fact:
+    serverlist: "{{ groups[target_group]  }}" 
+  vars:
+    target_group: schema_registry
+
+- set_fact:
+    target_host: "{{ groups[target_group][0]  }}"     
+  vars:
+    target_group: schema_registry    
+
+- set_fact:
+    protocol: "{{ 'https://' if tls_enabled is true else 'http://' }}"
+
+- name: Build SR URL
+  set_fact:
+       sr_server_url: "{{ protocol + groups[target_group][0] + ':' + sr_internal_port }}"
+  vars:
+    target_group: schema_registry 
+
+- name: Fetch Certificate Key Files from Remote Node to Controller for mTLS scenarios
+  run_once: yes
+  fetch: src={{ ssl_file_path }}/{{host_key_name}} dest={{ local_ssl_file_path }} flat=yes
+  when: mtls|bool
+  delegate_to: "{{ target_host }}"
+
+- name: Fetch Certificate Cert Files from Remote Node to Controller for mTLS scenarios
+  run_once: yes
+  fetch: src={{ ssl_file_path }}/{{host_cert_name}} dest={{ local_ssl_file_path }} flat=yes
+  when: mtls|bool
+  delegate_to: "{{ target_host }}"
+
+- name: Fetch Root Certificate Files from Remote Node to Controller for mTLS scenarios
+  run_once: yes
+  fetch: src={{ ssl_file_path }}/{{root_cert_name}} dest={{ local_ssl_file_path }} flat=yes
+  when: mtls|bool or tls_enabled|bool
+  delegate_to: "{{ target_host }}"
+
+- name: set key file path
+  set_fact:
+    key_file_path: {{ local_ssl_file_path }}/{{host_key_name}}
+  when: mtls|bool
+
+- name: set cert file path
+  set_fact:
+    crt_file_path: {{ local_ssl_file_path }}/{{host_cert_name}}
+  when: mtls|bool
+
+- name: set root cert path
+  set_fact:
+    rootcrt_file_path: {{ local_ssl_file_path }}/{{root_cert_name}}
+  when: mtls|bool or tls_enabled|bool
+
+- set_fact:
+      curl_parameter_str: |
+        --cacert {{ rootcrt_file_path }} --key {{ key_file_path }} --cert {{ crt_file_path }} -u {{ sr_user }}:{{ sr_user_password }}
+  when: mtls|bool
+
+- set_fact:
+      curl_parameter_str: |
+        -u {{ sr_user }}:{{ sr_user_password }}
+  when: not mtls|bool and not tls_enabled|bool
+
+- set_fact:
+      curl_parameter_str: |
+        --cacert {{ rootcrt_file_path }} -u {{ sr_user }}:{{ sr_user_password }}
+  when: tls_enabled|bool and not mtls|bool
+
+- debug:
+    var: curl_parameter_str
+
+- set_fact:
+      curl_req_get_subjects: |
+        curl -sf {{ sr_server_url }}/subjects {{ curl_parameter_str  }}
+
+- set_fact:
+      curl_subjects_api_url: |
+        {{ sr_server_url }}/subjects
+
+- set_fact:
+      curl_config_api_url: |
+        {{ sr_server_url }}/config
+
+- set_fact:
+      curl_mode_api_url: |
+        {{ sr_server_url }}/mode      
+

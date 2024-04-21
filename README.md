@@ -12,9 +12,13 @@ Use Cases Supported:
 4. Zookeeper ACL Management for both new and existing clusters (after performing the initial dump of the current state)
     - done using REST API of the Confluent Server
     - Authentication using Basic Auth
-4. Centralize ACL Management for both new and existing clusters (after performing the initial dump of the current state)
+5. Centralize ACL Management for both new and existing clusters (after performing the initial dump of the current state)
     - done using REST API of the Confluent MDS Server
     - Authentication using Basic Auth
+6. Schema Management provides ability to register new schemas, delete current and all previous versions of schema, update compatibility
+   backup schema and restore schemas to a new cluser (after performing the initial dump of the current state)
+   Supports all format types AVRO, PROTOBUF & JSON; Different subject scopes @topic level, @record level @ topic record level
+    - Authentication using Basic Auth      
 
 All playbooks support dumping the initial state to a file by enabling the following variables (and their alternatives for quota and rbac management):
     topic_dump_file: true
@@ -352,3 +356,79 @@ ansible-playbook -i hosts_test.yml zacl_management.yml
 ansible-playbook -i hosts_test.yml cacl_management.yml  -vv --check
 ### Apply 
 ansible-playbook -i hosts_test.yml cacl_management.yml
+
+# sample desired Comprehensive Schema state configuration - can be managed in an external file
+
+schemas: <br>
+       record_schemas: <br>
+         - record_name: "com.mycorp.mynamespace.recordonlyavro" <br>
+           schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
+           schema_delete_all: true <br>
+         - record_name: "com.mycorp.mynamespace.recordonlyproto" <br>
+           schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto" <br>
+           schema_delete_curr: true <br>
+         - record_name: "com.mycorp.mynamespace.recordonlyjson" <br>
+           schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
+       topics: <br>
+         - name: test <br>
+           key: <br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
+           value: <br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
+             schema_delete_all: true # Optional Delete Switch you can add to delete  schema all versions for the subject/scope <br>
+             record_schemas: <br>
+                  - record_name: "com.mycorp.mynamespace.address" <br>
+                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
+         - name: test2 <br>
+           key: <br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto" <br>
+             record_schemas: <br>
+                  - record_name: "com.mycorp.mynamespace.address" <br>
+                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto" <br>
+           value: <br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto" <br>
+             schema_delete_curr: true # Optional Delete Switch you can add to delete  schema all versions for the subject/scope <br>
+         - name: test3 <br>
+           key: <br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
+             compatibility: "FORWARD" #--> Compatibility is an optional parameter; The schema management process sets a default 'BACKWARD' if not specified <br>
+             record_schemas: <br>
+                  - record_name: "com.mycorp.mynamespace.address" <br>
+                    compatibilty: "FORWARD" <br>
+                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
+                    schema_delete_all: true <br>
+                  - record_name: "com.mycorp.mynamespace.occupation" <br>
+                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
+           value: <br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
+             record_schemas: <br>
+                  - record_name: "com.mycorp.mynamespace.address" <br>
+                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
+                  - record_name: "com.mycorp.mynamespace.occupation" <br>
+                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
+         - name: test4 <br>
+           key: <br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
+           value: <br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
+         - name: test5 <br>
+           key: <br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc"<br>
+        - name: test6<br>
+           value:<br>
+             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc"<br>
+        - name: _confluent-internal # We can protect the schema of internal topics from being modified...So the mentioned topic will not have any effect when running the process<br>
+         value:<br>
+             schema_file_src_path: "/home/ubuntu/Schema/internalvalue.avsc"  
+
+###### Backup and Restore Schemas
+
+Back up Schemas in an existing cluster setting the dump_only variable to true
+
+/*ansible-playbook --private-key ${PRIV_KEY_FILE} -i mrchostsrbacmetric.yml --extra-vars "@./schemadef.yml" --extra-vars "dump_only=true" schemas_management.yml -vvvv*/
+
+Restore  Schemas in an new cluster setting the restore_only=truevariable to true
+
+ansible-playbook --private-key ${PRIV_KEY_FILE} -i mrchostsrbacdata.yml --extra-vars "@./schema_dump_out.yml"  --extra-vars "restore_only=true" schemas_management.yml -vvvv
+
+

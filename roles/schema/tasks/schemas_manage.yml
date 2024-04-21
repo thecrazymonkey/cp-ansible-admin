@@ -1,0 +1,299 @@
+---
+
+- name: Update to read write mode globally before updating the schemas
+  shell: |
+          mode_update="curl -X PUT --data '{\"mode\": \"{{ desired_mode }}\" }' -H \"Content-Type: application/vnd.schemaregistry.v1+json\" \
+          {{ curl_mode_api_url|trim }}/mode {{ curl_parameter_str  }}"
+          eval $mode_update
+  register: curl_result
+  failed_when: curl_result.stdout == ""
+  vars:
+    desired_mode: 'READWRITE'   
+
+- set_fact:
+     topics: "{{ schemas.topics }}"
+
+- debug:
+    msg: "{{ topics }}"  
+
+
+# Transformations or wrangling of Ansible variable followed by sufficx _t#     
+- set_fact:
+    topics_key_t0: "{{ topics_key_t0 | d([]) + [{'topic_name': item.name, 'key': item.key | combine ({'schema_delete_all': schema_delete_all
+      if item.key.schema_delete_all is not defined else item.key.schema_delete_all} ) | combine ({'schema_delete_curr': schema_delete_curr
+      if item.key.schema_delete_curr is not defined else item.key.schema_delete_curr} ) | combine ({'schema_update': schema_update
+      if item.key.schema_update is not defined else item.key.schema_update} ) | combine ({'compatibility': compatibility
+      if item.key.compatibility is not defined else item.key.compatibility})
+      |dict2items | rejectattr('key', 'equalto', 'record_schemas') |list
+      | items2dict }] }}"
+  loop: '{{ topics }}'   
+  when: item.key is defined and item.name | regex_search(topic_protected) == none
+
+- name: Set Schema Type Key
+  set_fact:
+     topics_key: "{{ topics_key|default([]) + [{'topic_name': item.topic_name, 'key': item.key|combine({'schema_type': _type|from_yaml})} ] }}"
+  loop: "{{ topics_key_t0 }}"
+  when: topics_key_t0 is defined and topics_key_t0 is iterable
+  vars:
+    _type: |
+      {% if '.avsc' in item.key.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.key.schema_file_src_path %}  
+      protobuf
+      {% else %}
+      json
+      {% endif %}
+
+- set_fact:
+    topics_value_t0: "{{ topics_value_t0 | d([]) + [{'topic_name': item.name, 'value': item.value | combine ({'schema_delete_all': schema_delete_all
+      if item.value.schema_delete_all is not defined else item.value.schema_delete_all} ) | combine ({'schema_delete_curr': schema_delete_curr
+      if item.value.schema_delete_curr is not defined else item.value.schema_delete_curr} ) | combine ({'schema_update': schema_update
+      if item.value.schema_update is not defined else item.value.schema_update} ) | combine ({'compatibility': compatibility
+      if item.value.compatibility is not defined else item.value.compatibility})
+      |dict2items | rejectattr('key', 'equalto', 'record_schemas') |list
+      | items2dict }] }}"
+  loop: '{{ topics }}'
+  when: item.value is defined and item.name | regex_search(topic_protected) == none
+
+- name: Set Schema Type Value
+  set_fact:
+     topics_value: "{{ topics_value|default([]) + [{'topic_name': item.topic_name, 'value': item.value|combine({'schema_type': _type|from_yaml})} ] }}"
+  loop: "{{ topics_value_t0 }}"
+  when: topics_value_t0 is defined and topics_value_t0 is iterable
+  vars:
+    _type: |
+      {% if '.avsc' in item.value.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.value.schema_file_src_path %}
+      protobuf
+      {% else %}
+      json
+      {% endif %}  
+
+- name: Combined topics value and key schema into a single list
+  set_fact:
+     combined_topics: "{{ [topics_key, topics_value]|
+                          community.general.lists_mergeby('topic_name',
+                                                  recursive=true,
+                                                  list_merge='append') }}"
+
+- name: Get Current Subjects
+  command: "{{ curl_req_get_subjects }}"
+  register: curl_result
+  failed_when: curl_result == 0
+  until: not curl_result.failed
+  retries: 5
+  delay: 1
+
+- debug:
+    var: curl_result
+
+- set_fact:
+    subject_list_curr: "{{ curl_result.stdout | trim }}"   
+
+- debug:
+    var: subect_list_curr
+
+- name: Delete all versions of the schemas for the existing subjects
+  shell: |
+          curl -X DELETE {{ curl_subjects_api_url|trim }}/{{ item }} {{ curl_parameter_str | trim  }}
+  register: curl_result
+  with_items: "{{ subject_list_curr | d([]) }}"
+  when: delete_all_schemas|bool
+
+- name: Deliberate Fail
+  fail:
+    msg: "Deliberate Failing" 
+  when: delete_all_schemas|bool
+
+- debug:
+    var: combined_topics
+
+- name: Update Compatibility and Create Schemas
+  include_tasks: schemas_create.yml
+  loop: "{{ combined_topics   }}"  
+  vars:
+    http_method: POST
+    http_status_code: 200
+    itemin: "{{ item }}" 
+    subject_prefix: "{{ item.topic_name }}" 
+    level_set: "topic"  
+  when:
+    - combined_topics|length > 0
+    - not ansible_check_mode
+
+- name: Delete Schemas
+  include_tasks: schemas_delete.yml
+  loop: "{{ combined_topics   }}"
+  vars:
+    http_method: DELETE
+    http_status_code: 200
+    itemin: "{{ item }}"
+    level_set: "topic"  
+  when:
+    - combined_topics|length > 0
+    - not ansible_check_mode
+
+- name: Flatten the record schema arrays for keys
+  set_fact:
+     key_flat: "{{ key_flat | default([]) + [item.1|combine({'topic_name': item.0.name})|combine({'key_or_value': 'key'})|combine ({'schema_delete_all': schema_delete_all
+      if item.1.schema_delete_all is not defined else item.1.schema_delete_all} )|combine ({'schema_delete_curr': schema_delete_curr
+      if item.1.schema_delete_curr is not defined else item.1.schema_delete_curr} ) | combine ({'schema_update': schema_update
+      if item.1.schema_update is not defined else item.1.schema_update} ) | combine ({'compatibility': compatibility
+      if item.1.compatibility is not defined else item.1.compatibility})|combine(recursive=True)] }}"
+  loop: "{{ schemas.topics | d([]) | selectattr('key.record_schemas', 'defined') | subelements('key.record_schemas') }}"
+  when: item.0.key is defined and item.0.key.record_schemas is defined and item.0.name | regex_search(topic_protected) == none
+
+    
+- name: Set additional attributes to the flattened key arrays above based on conditions
+  set_fact:
+     key_flat_add: "{{ key_flat_add|default([]) + [item|combine({'delete_flag': _flag|from_yaml})|combine({'schema_type': _type|from_yaml}) ] }}"
+  loop: "{{ key_flat }}"
+  when: key_flat is iterable
+  vars:
+    _flag: |
+       {% if item.schema_delete_all|bool or item.schema_delete_curr|bool %}
+       true
+       {% else %}
+       false
+       {% endif %} 
+    _type: |
+      {% if '.avsc' in item.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.schema_file_src_path %}
+      protobuf
+      {% else %}
+      json
+      {% endif %}  
+
+- name: Flatten the record schema arrays for values
+  set_fact:
+      value_flat: "{{ value_flat | default([]) + [item.1|combine({'topic_name': item.0.name})|combine({'key_or_value': 'value'})|combine ({'schema_delete_all': schema_delete_all
+       if item.1.schema_delete_all is not defined else item.1.schema_delete_all} )|combine ({'schema_delete_curr': schema_delete_curr
+       if item.1.schema_delete_curr is not defined else item.1.schema_delete_curr} ) | combine ({'schema_update': schema_update
+       if item.1.schema_update is not defined else item.1.schema_update} ) | combine ({'compatibility': compatibility
+       if item.1.compatibility is not defined else item.1.compatibility})|combine(recursive=True)] }}"
+  loop: "{{ schemas.topics | d([]) | selectattr('value.record_schemas', 'defined') | subelements('value.record_schemas') }}"
+  when: item.0.value is defined and item.0.value.record_schemas is defined and item.0.name | regex_search(topic_protected) == none
+
+- name: Set additional attributes to the flattened value arrays above based on conditions
+  set_fact:
+     value_flat_add: "{{ value_flat_add|default([]) + [item|combine({'delete_flag': _flag|from_yaml})|combine({'schema_type': _type|from_yaml}) ] }}"
+  loop: "{{ value_flat }}"
+  when: value_flat is iterable
+  vars:
+    _flag: |
+       {% if item.schema_delete_all|bool or item.schema_delete_curr|bool %}
+       true
+       {% else %}
+       false
+       {% endif %}
+    _type: |
+      {% if '.avsc' in item.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.schema_file_src_path %}
+      protobuf
+      {% else %}
+      json
+      {% endif %}
+
+- name: Combine flattened record schemas for key and values
+  set_fact:
+      combined_flat: "{{ key_flat_add + value_flat_add  }}"   
+
+- name: Debug combined message
+  debug:
+    msg: "{{ combined_flat  }}" 
+
+- debug:
+    var: combined_flat
+
+- name: Update Compatibility and Create Schemas
+  include_tasks: schemas_create.yml
+  loop: "{{ combined_flat   }}"
+  vars:
+    http_method: POST
+    http_status_code: 200
+    itemin: "{{ item }}"
+    subject_prefix: "{{ item.topic_name + '-' + item.record_name }}"
+    level_set: "topicrecord"  
+  when:
+    - combined_flat|length > 0
+    - not ansible_check_mode
+
+- name: Delete Schemas
+  include_tasks: schemas_delete.yml
+  loop: "{{ combined_flat   }}"
+  vars:
+    http_method: DELETE
+    http_status_code: 200
+    itemin: "{{ item }}"
+    level_set: "topicrecord"
+  when:
+    - combined_flat|length > 0
+    - not ansible_check_mode
+
+
+- set_fact:
+    record_schemas: "{{ record_schemas | d([]) + [item | combine ({'schema_delete_all': schema_delete_all
+      if item.schema_delete_all is not defined else item.schema_delete_all} ) | combine ({'schema_delete_curr': schema_delete_curr
+      if item.schema_delete_curr is not defined else item.schema_delete_curr} ) | combine ({'schema_update': schema_update
+      if item.schema_update is not defined else item.schema_update} ) | combine ({'compatibility': compatibility
+      if item.compatibility is not defined else item.compatibility}) | combine ({'schema_type': _type|from_yaml})] }}"
+  loop: '{{ schemas.record_schemas }}'
+  when: schemas.record_schemas is defined  
+  vars:
+    _type: |
+      {% if '.avsc' in item.schema_file_src_path %}
+      avro
+      {% elif '.proto' in item.schema_file_src_path %}
+      protobuf
+      {% else %}
+      json
+      {% endif %} 
+
+      
+- debug:
+    var: record_schemas
+
+- name: Update Compatibility and Create Schemas
+  include_tasks: schemas_create.yml
+  loop: "{{ record_schemas   }}"
+  vars:
+    http_method: POST
+    http_status_code: 200
+    itemin: "{{ item }}"
+    subject_prefix: "{{ item.record_name }}"
+    level_set: "record"
+  when:
+    - record_schemas|length > 0
+    - not ansible_check_mode 
+
+- name: Delete Schemas
+  include_tasks: schemas_delete.yml
+  loop: "{{ record_schemas   }}"
+  vars:
+    http_method: DELETE
+    http_status_code: 200
+    itemin: "{{ item }}"
+    level_set: "record"
+  when:
+    - record_schemas|length > 0
+    - not ansible_check_mode
+  
+- name: Remove the Certificate Key File from the controller node
+  file:
+    path: '{{ key_file_path }}'
+    state: absent  
+
+- name: Remove the Certificate File from the controller node
+  file:
+    path: '{{ crt_file_path }}'
+    state: absent
+
+- name: Remove the Root Certificate File from the controller node
+  file:
+    path: '{{ rootcrt_file_path }}'
+    state: absent
+      
+
