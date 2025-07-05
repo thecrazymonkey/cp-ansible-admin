@@ -6,6 +6,6 @@
 
   tasks:
 
-   - name: Process Schemas
-     import_role:
-        name: schema  
+    - name: Process Schemas
+      import_role:
+        name: schema

@@ -1,0 +1,233 @@
+---
+# Example RBAC configuration for Confluent Platform Role-Based Access Control
+# This file demonstrates how to structure role bindings for the RBAC Management role
+#
+# Structure:
+# - clusterName: Name of the cluster in the cluster registry
+# - name: Unique identifier for the role binding
+# - principal: The user or service account (User:username or User:CN=...)
+# - role: The role to assign (SystemAdmin, SecurityAdmin, etc.)
+# - resources: List of resources with pattern types and resource types
+#
+# The RBAC Management role uses the Confluent MDS (Metadata Service) REST API
+# and requires SystemAdmin privileges for the user executing the playbook
+#
+# Safety Features:
+# - rbac_delete_enabled: Controls deletion operations (default: true)
+# - rbac_protected_accounts: Regex pattern for protected accounts
+# - rbac_cluster_whitelist: Regex for allowed clusters
+
+rolebindings:
+  # System administrators with full access
+  - clusterName: production-cluster
+    name: system-admin-1
+    principal: User:admin
+    role: SystemAdmin
+
+  - clusterName: production-cluster
+    name: system-admin-2
+    principal: User:superUser
+    role: SystemAdmin
+
+  # Security administrators for compliance
+  - clusterName: production-cluster
+    name: security-admin-1
+    principal: User:security-team
+    role: SecurityAdmin
+
+  # Connect administrators with full Connect access
+  - clusterName: production-cluster
+    name: connect-admin-1
+    principal: User:connectAdmin
+    resources:
+      - name: _confluent-monitoring
+        patternType: PREFIXED
+        resourceType: Topic
+    role: DeveloperWrite
+
+  - clusterName: production-cluster
+    name: connect-admin-2
+    principal: User:connectAdmin
+    resources:
+      - name: operator.connect
+        patternType: LITERAL
+        resourceType: Group
+      - name: operator.connect-
+        patternType: PREFIXED
+        resourceType: Topic
+    role: ResourceOwner
+
+  # ksqlDB administrators
+  - clusterName: production-cluster
+    name: ksqldb-admin-1
+    principal: User:ksqlDBAdmin
+    resources:
+      - name: kafka-cluster
+        patternType: LITERAL
+        resourceType: Cluster
+      - name: operator.ksqldb_
+        patternType: PREFIXED
+        resourceType: TransactionalId
+    role: DeveloperWrite
+
+  - clusterName: production-cluster
+    name: ksqldb-admin-2
+    principal: User:ksqlDBAdmin
+    resources:
+      - name: _confluent-ksql-operator.ksqldb_
+        patternType: PREFIXED
+        resourceType: Group
+      - name: _confluent-ksql-operator.ksqldb__command_topic
+        patternType: LITERAL
+        resourceType: Topic
+      - name: operator.ksqldb_ksql_processing_log
+        patternType: LITERAL
+        resourceType: Topic
+    role: ResourceOwner
+
+  # Schema Registry administrators
+  - clusterName: production-cluster
+    name: schema-registry-admin-1
+    principal: User:schemaregistryUser
+    resources:
+      - name: id_schemaregistry_operator
+        patternType: LITERAL
+        resourceType: Group
+      - name: _confluent-license
+        patternType: LITERAL
+        resourceType: Topic
+      - name: _schemas_schemaregistry_operator
+        patternType: LITERAL
+        resourceType: Topic
+    role: ResourceOwner
+
+  # Control Center administrators
+  - clusterName: production-cluster
+    name: control-center-admin-1
+    principal: User:controlcenterAdmin
+    role: SystemAdmin
+
+  # Application developers with topic-specific access
+  - clusterName: production-cluster
+    name: app-developer-1
+    principal: User:alice
+    resources:
+      - name: user-events
+        patternType: LITERAL
+        resourceType: Topic
+      - name: user-group
+        patternType: PREFIXED
+        resourceType: Group
+    role: DeveloperWrite
+
+  - clusterName: production-cluster
+    name: app-developer-2
+    principal: User:bob
+    resources:
+      - name: orders
+        patternType: PREFIXED
+        resourceType: Topic
+      - name: orders-processor
+        patternType: LITERAL
+        resourceType: Group
+    role: DeveloperRead
+
+  # Service accounts for applications
+  - clusterName: production-cluster
+    name: service-account-1
+    principal: User:CN=analytics-service,OU=Services,O=MyCompany
+    resources:
+      - name: analytics
+        patternType: PREFIXED
+        resourceType: Topic
+      - name: analytics-
+        patternType: PREFIXED
+        resourceType: Group
+    role: DeveloperWrite
+
+  # Data scientists with read-only access
+  - clusterName: production-cluster
+    name: data-scientist-1
+    principal: User:data-team
+    resources:
+      - name: clickstream
+        patternType: LITERAL
+        resourceType: Topic
+      - name: user-events
+        patternType: LITERAL
+        resourceType: Topic
+      - name: data-science-
+        patternType: PREFIXED
+        resourceType: Group
+    role: DeveloperRead
+
+  # Monitoring and alerting service
+  - clusterName: production-cluster
+    name: monitoring-service-1
+    principal: User:monitoring
+    resources:
+      - name: _confluent-monitoring
+        patternType: PREFIXED
+        resourceType: Topic
+      - name: monitoring-group
+        patternType: LITERAL
+        resourceType: Group
+    role: DeveloperRead
+
+  # Cross-cluster role bindings for DR setup
+  - clusterName: dr-cluster
+    name: dr-admin-1
+    principal: User:admin
+    role: SystemAdmin
+
+  - clusterName: dr-cluster
+    name: dr-replication-1
+    principal: User:replicator
+    resources:
+      - name: "*"
+        patternType: LITERAL
+        resourceType: Topic
+      - name: "*"
+        patternType: LITERAL
+        resourceType: Group
+    role: DeveloperWrite
+
+# Additional configuration variables (set in inventory or playbook):
+#
+# mds_user: mds                         # MDS username (must be SystemAdmin)
+# mds_user_password: mds               # MDS password
+# mds_server_url: https://kafka1:8090  # MDS server URL
+# rbac_delete_enabled: true            # Enable/disable role binding deletion
+# rbac_protected_accounts: "User:superUser"  # Protected accounts regex
+# rbac_cluster_whitelist: ".*"         # Allowed clusters regex
+# rbac_dump_file: false                # Enable state dump
+# rbac_dump_destination: /tmp/rbac_dump.yml
+#
+# Example usage:
+# ansible-playbook -i inventory.yml rbac_management.yml -e @examples/rbac_example.yml
+#
+# Preview changes:
+# ansible-playbook -i inventory.yml rbac_management.yml -e @examples/rbac_example.yml --check -vv
+#
+# Common roles:
+# - SystemAdmin: Full administrative access to all resources
+# - SecurityAdmin: Can manage security configurations and ACLs
+# - UserAdmin: Can manage users and service accounts
+# - ResourceOwner: Full access to specific resources
+# - DeveloperRead: Read access to resources
+# - DeveloperWrite: Read/write access to resources
+# - DeveloperManage: Manage (create/delete) resources
+# - Operator: Operations-focused access
+#
+# Common resource types:
+# - Cluster: Kafka cluster
+# - Topic: Kafka topics
+# - Group: Consumer groups
+# - TransactionalId: Transaction IDs
+# - DelegationToken: Delegation tokens
+# - User: Users
+# - ServiceAccount: Service accounts
+#
+# Pattern types:
+# - LITERAL: Exact match
+# - PREFIXED: Prefix match

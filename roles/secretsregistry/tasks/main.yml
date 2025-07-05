@@ -1,0 +1,73 @@
+---
+- name: Authorization Header
+  vars:
+    _user: "{{ rest_user if not oauth_enabled else oauth_client_id }}"
+    _user_password: "{{ rest_user_password if not oauth_enabled else oauth_client_secret }}"
+  ansible.builtin.include_tasks: roles/common/tasks/_authorization_header.yml
+
+- name: Test Connect Cluster Health
+  uri:
+    url: "{{ rest_server_url }}"
+    method: GET
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    timeout: "{{ secret_timeout }}"
+    headers:
+      Authorization: "{{ authorization_header }}"
+    status_code: [200]
+  register: health_check
+  check_mode: false
+
+- name: Test Secret Registry Paths Endpoint
+  uri:
+    url: "{{ rest_server_url }}/secret/paths"
+    method: GET
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    timeout: "{{ secret_timeout }}"
+    headers:
+      Authorization: "{{ authorization_header }}"
+      Content-Type: "application/json"
+    status_code: [200, 404]
+  register: secret_registry_check
+  check_mode: false
+
+- name: Dump secrets
+  include_tasks: secrets_dump.yml
+
+- name: Save Secrets
+  include_tasks: secrets_save.yml
+  when: secrets_current|length > 0
+
+- name: Delta secrets
+  include_tasks: secrets_delta.yml
+
+- name: Create secrets
+  include_tasks: secrets_create.yml
+  vars:
+    secrets_in: "{{ secrets_to_add }}"
+  when:
+    - secrets_to_add|length > 0
+    - not ansible_check_mode
+
+- name: Update secrets
+  include_tasks: secrets_update.yml
+  vars:
+    secrets_in: "{{ secrets_to_update }}"
+  when:
+    - secrets_to_update|length > 0
+    - secret_update_enabled|bool
+    - not ansible_check_mode
+
+- name: Delete secrets
+  include_tasks: secrets_delete.yml
+  vars:
+    secrets_in: "{{ secrets_to_delete }}"
+  when:
+    - secrets_to_delete|length > 0
+    - secret_delete_enabled|bool
+    - not ansible_check_mode

@@ -1,0 +1,25 @@
+---
+# Internal variables for secretsregistry role
+secrets_registry_api_endpoints:
+  secrets: "/api/{{ secrets_registry_api_version }}/secrets"
+  namespaces: "/api/{{ secrets_registry_api_version }}/namespaces"
+  health: "/api/{{ secrets_registry_api_version }}/health"
+
+# Internal state variables
+secrets_registry_headers:
+  Content-Type: "application/json"
+  Accept: "application/json"
+
+# Cached data
+secrets_registry_namespaces: []
+secrets_registry_current_state: {}
+secrets_registry_desired_state: {}
+
+# Operation tracking
+secrets_registry_operations: []
+secrets_registry_failed_operations: []
+
+# Temporary variables
+_secrets_temp_data: {}
+_secrets_processing_batch: []
+_secrets_validation_errors: []

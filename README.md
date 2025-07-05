@@ -1,492 +1,451 @@
-Use Cases Supported:
-1. Topic Management for both new and existing clusters (after performing the initial dump of the current state)
-    - done using REST API of the Confluent Server
-    - CLI required only for the number of partitions increase (REST API support not available in the Confluent REST API yet)
-    - Authentication using Basic Auth
-2. RBAC Management for both new and existing clusters (after performing the initial dump of the current state)
-    - done using REST API of the Confluent MDS Server
-    - Authentication using Basic Auth
-    - requires all managed clusters to be registered in the Cluster Registry
-3. Quota Management for both new and existing clusters (after performing the initial dump of the current state)
-    - 100% CLI implementation (REST API support not available in the Confluent REST API yet)
-4. Zookeeper ACL Management for both new and existing clusters (after performing the initial dump of the current state)
-    - done using REST API of the Confluent Server
-    - Authentication using Basic Auth
-5. Centralize ACL Management for both new and existing clusters (after performing the initial dump of the current state)
-    - done using REST API of the Confluent MDS Server
-    - Authentication using Basic Auth
-6. Schema Management provides ability to register new schemas, delete current and all previous versions of schema, update compatibility
-   backup schema and restore schemas to a new cluser (after performing the initial dump of the current state)
-   Supports all format types AVRO, PROTOBUF & JSON; Different subject scopes @topic level, @record level @ topic record level
-    - Authentication using Basic Auth      
- 
-All playbooks support dumping the initial state to a file by enabling the following variables (and their alternatives for quota and rbac management):
-    topic_dump_file: true
-    topic_dump_destination: /tmp/topic_dump_out.yml    
+# Confluent Platform REST Admin
 
-All playbooks allow for evaluating the impact of the input changes using the Ansible check mode (verbosity level 2 gives the output structures/build plans)
-    ansible-playbook -i hosts_test.yml topics_management.yml --check -vv
+A comprehensive Ansible project for managing Confluent Platform components through declarative configuration. This project provides automation for topics, RBAC, quotas, ACLs, connectors, schemas, and secrets management.
 
-The execution of the playbooks after checking the execution plan 
-    ansible-playbook -i hosts_test.yml topics_management.yml
+## Overview
 
-Notable variables in the inventory (refer to the sample file)    
+The Confluent Platform REST Admin project enables infrastructure-as-code management of Confluent Platform environments. It supports both new cluster deployments and existing cluster management by performing initial state dumps and applying desired configurations through REST APIs and CLI tools.
 
-# OAUTH setup for management - will replace the Basic Auth setup with Access token use
-    oauth_enabled: true
-    oauth_server_uri: https://oauth-server.com/token
-    oauth_client_id: client-id
-    oauth_client_secret: client-secret
+## Supported Use Cases
 
-# REST API connectivity for topics management - for Basic Auth
-    rest_server_url: https://kafka1.confluent.io:8090
-    rest_user: user
-    rest_user_password: user-secret
+1. **Topic Management** - Create, update, delete topics with configuration management
+2. **RBAC Management** - Manage role-based access control and permissions
+3. **Quota Management** - Configure user and client quotas
+4. **ACL Management** - Manage both Zookeeper and Centralized ACLs
+5. **Connector Management** - Deploy and manage Kafka Connect connectors
+6. **Schema Management** - Register, update, and manage schemas in Schema Registry
+7. **Secrets Management** - Manage secrets in Kafka Connect Secret Registry
 
-# For topics management get cluster id >confluent cluster describe --url https://url:<port> -ojson | jq -r '.crn'      
-    cluster_id: - note that this is optional now and gets populated from the metadata endpoint automatically if not filled
-# properties for Kafka command line use - needed only for partitions_count increase and quota management     
-    kafka_broker_hostname: kafka1.confluent.io
-    kafka_broker_port: 9091
-# add configuration file details for client connectivity to the cluster    
-    kafka_broker_client_config_file: ./settings/client.properties
+## Project Structure
 
-# provide secrets protection key if applicable    
-    secrets_protection_masterkey: blahblah
-# path to binaries    
-    binary_base_path: /home/confluent/confluent-7.0.1    
+```
+cp-rest-admin/
+├── roles/
+│   ├── topic/              # Kafka topics management
+│   ├── rbac/               # Role-based access control
+│   ├── quota/              # User and client quotas
+│   ├── zacl/               # Zookeeper ACLs
+│   ├── cacl/               # Centralized ACLs
+│   ├── connectors/         # Kafka Connect connectors
+│   ├── schema/             # Schema Registry management
+│   ├── secretsregistry/    # Connect Secret Registry
+│   └── common/             # Shared functionality
+├── examples/               # Example configurations
+├── settings/               # Configuration files
+├── *.yml                  # Management playbooks
+└── hosts_*.yml            # Inventory files
+```
 
-# topics delete is disabled by default
-    topic_delete_enabled: false
-# partitions management disabled by default
-    topic_partitions_enabled: false
+## Roles Overview
 
-# list regex representing all topics you want to be left alone
-    topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
+### Topic Management (`topic`)
+- **Purpose**: Manage Kafka topics, partitions, and configurations
+- **Features**: Create/update/delete topics, partition management, configuration changes
+- **API**: Confluent Server REST API v3
+- **Authentication**: Basic Auth, OAuth
 
-# sample desired topics state structure - can be managed using external file
-    topics:
-      - topic_name: test
-        partitions_count: 6
-        replication_factor: 3
-        configs:
-          - name: min.insync.replicas
-            value: "2"
-      - topic_name: test2
-        partitions_count: 6
-        replication_factor: 3
-        configs:
-          - name: min.insync.replicas
-            value: "1"
-          - name: retention.ms
-            value: "60480000"
+### RBAC Management (`rbac`)
+- **Purpose**: Manage role-based access control and permissions
+- **Features**: Create/update/delete role bindings, cluster-wide permissions
+- **API**: Confluent MDS (Metadata Service) REST API
+- **Authentication**: Basic Auth (SystemAdmin required)
+- **Note**: Uses separate MDS variables (`mds_server_url`, `mds_user`, `mds_user_password`)
 
-# rbac section
-# connectivity for the MDS connection - the user must be SystemAdmin 
-    mds_user: mds
-    mds_user_password: mds
-    mds_server_url: https://kafka1.confluent.io:8090
+### Quota Management (`quota`)
+- **Purpose**: Configure rate limits for users and clients
+- **Features**: Producer/consumer byte rates, request percentage limits
+- **API**: Kafka Admin API (CLI-based)
+- **Authentication**: SASL/SSL via client properties
 
-# sample desired rolebindings state configuration - can be managed in an external file
-    rolebindings:
-    - clusterName: test-cluster
-      name: test-cluster-0
-      principal: User:connectAdmin
-      resources:
-      - name: _confluent-monitoring
+### Zookeeper ACL Management (`zacl`)
+- **Purpose**: Manage traditional Kafka ACLs
+- **Features**: Topic, group, cluster ACLs with various permissions
+- **API**: Confluent Server REST API
+- **Authentication**: Basic Auth
+
+### Centralized ACL Management (`cacl`)
+- **Purpose**: Manage centralized ACLs through MDS
+- **Features**: Unified ACL management across clusters
+- **API**: Confluent MDS REST API
+- **Authentication**: Basic Auth
+- **Note**: Uses separate MDS variables (`mds_server_url`, `mds_user`, `mds_user_password`)
+
+### Connector Management (`connectors`)
+- **Purpose**: Deploy and manage Kafka Connect connectors
+- **Features**: Create/update/delete connectors, configuration management
+- **API**: Kafka Connect REST API
+- **Authentication**: Basic Auth
+
+### Schema Management (`schema`)
+- **Purpose**: Manage Schema Registry schemas
+- **Features**: Register/update/delete schemas, compatibility settings
+- **API**: Schema Registry REST API
+- **Authentication**: Basic Auth, TLS
+
+### Secret Registry Management (`secretsregistry`)
+- **Purpose**: Manage secrets in Kafka Connect Secret Registry
+- **Features**: Create/update/delete secrets, version management
+- **API**: Connect Secret Registry REST API
+- **Authentication**: Basic Auth, OAuth
+
+## Common Configuration
+
+### Required Variables
+
+Most roles use these standard REST API variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `rest_server_url` | Kafka REST API URL | `https://kafka1.confluent.io:8090` |
+| `rest_user` | Username for authentication | `admin` |
+| `rest_user_password` | Password for authentication | `admin` |
+
+### RBAC-Specific Variables
+
+RBAC management uses separate MDS (Metadata Service) variables:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `mds_server_url` | MDS REST API URL | `https://kafka1.confluent.io:8090` |
+| `mds_user` | MDS username (must be SystemAdmin) | `mds` |
+| `mds_user_password` | MDS password | `mds` |
+
+### Optional Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `oauth_enabled` | `false` | Enable OAuth authentication |
+| `oauth_token_uri` | `""` | OAuth token endpoint |
+| `oauth_client_id` | `""` | OAuth client ID |
+| `oauth_client_secret` | `""` | OAuth client secret |
+| `cluster_id` | `""` | Kafka cluster ID (auto-discovered if empty) |
+| `binary_base_path` | `/home/confluent/confluent-7.0.1` | Path to Confluent binaries |
+
+### TLS Configuration
+
+| Variable | Description |
+|----------|-------------|
+| `client_tls_cert` | Client certificate path |
+| `client_tls_key` | Client private key path |
+| `ca_tls_path` | CA certificate path |
+
+## Usage Examples
+
+### 1. Topic Management
+
+```bash
+# Preview topic changes
+ansible-playbook -i hosts_sample.yml topics_management.yml --check -vv
+
+# Apply topic configuration
+ansible-playbook -i hosts_sample.yml topics_management.yml
+
+# Dump current topics
+ansible-playbook -i hosts_sample.yml topics_management.yml -e topic_dump_file=true
+```
+
+### 2. RBAC Management
+
+```bash
+# Preview RBAC changes (uses mds_server_url, mds_user, mds_user_password)
+ansible-playbook -i hosts_sample.yml rbac_management.yml --check -vv
+
+# Apply RBAC configuration
+ansible-playbook -i hosts_sample.yml rbac_management.yml
+
+# Dump current role bindings
+ansible-playbook -i hosts_sample.yml rbac_management.yml -e rbac_dump_file=true
+```
+
+### 3. Quota Management
+
+```bash
+# Preview quota changes
+ansible-playbook -i hosts_sample.yml quota_management.yml --check -vv
+
+# Apply quota configuration
+ansible-playbook -i hosts_sample.yml quota_management.yml
+```
+
+### 4. ACL Management
+
+```bash
+# Zookeeper ACLs
+ansible-playbook -i hosts_sample.yml zacl_management.yml --check -vv
+ansible-playbook -i hosts_sample.yml zacl_management.yml
+
+# Centralized ACLs (uses mds_server_url, mds_user, mds_user_password)
+ansible-playbook -i hosts_sample.yml cacl_management.yml --check -vv
+ansible-playbook -i hosts_sample.yml cacl_management.yml
+```
+
+### 5. Connector Management
+
+```bash
+# Preview connector changes
+ansible-playbook -i hosts_sample.yml connectors_management.yml --check -vv
+
+# Apply connector configuration
+ansible-playbook -i hosts_sample.yml connectors_management.yml
+```
+
+### 6. Schema Management
+
+```bash
+# Preview schema changes
+ansible-playbook -i hosts_sample.yml schemas_management.yml --check -vv
+
+# Apply schema configuration
+ansible-playbook -i hosts_sample.yml schemas_management.yml
+
+# Backup schemas
+ansible-playbook -i hosts_sample.yml schemas_management.yml -e dump_only=true
+
+# Restore schemas
+ansible-playbook -i hosts_sample.yml schemas_management.yml -e restore_only=true
+```
+
+### 7. Secret Registry Management
+
+```bash
+# Preview secret changes
+ansible-playbook -i hosts_sample.yml secretsregistry_management.yml --check -vv
+
+# Apply secret configuration
+ansible-playbook -i hosts_sample.yml secretsregistry_management.yml -e @examples/secrets_example.yml
+```
+
+## Configuration Formats
+
+### Topics Configuration
+
+```yaml
+topics:
+  - topic_name: my-topic
+    partitions_count: 6
+    replication_factor: 3
+    configs:
+      - name: min.insync.replicas
+        value: "2"
+      - name: retention.ms
+        value: "604800000"
+```
+
+### RBAC Configuration
+
+```yaml
+rolebindings:
+  - clusterName: my-cluster
+    name: connector-admin
+    principal: User:connectAdmin
+    resources:
+      - name: my-topic
         patternType: PREFIXED
         resourceType: Topic
-      role: DeveloperWrite
-    - clusterName: test-cluster
-      name: test-cluster-1
-      principal: User:connectAdmin
-      resources:
-      - name: operator.connect
-        patternType: LITERAL
-        resourceType: Group
-      - name: operator.connect-
-        patternType: PREFIXED
-        resourceType: Topic
-      role: ResourceOwner
-    - clusterName: test-cluster
-      name: test-cluster-2
-      principal: User:ksqlDBAdmin
-      resources:
-      - name: kafka-cluster
-        patternType: LITERAL
-        resourceType: Cluster
-      - name: operator.ksqldb_
-        patternType: PREFIXED
-        resourceType: TransactionalId
-      role: DeveloperWrite
-    - clusterName: test-cluster
-      name: test-cluster-3
-      principal: User:ksqlDBAdmin
-      resources:
-      - name: _confluent-ksql-operator.ksqldb_
-        patternType: PREFIXED
-        resourceType: Group
-      - name: _confluent-ksql-operator.ksqldb__command_topic
-        patternType: LITERAL
-        resourceType: Topic
-      - name: operator.ksqldb_ksql_processing_log
-        patternType: LITERAL
-        resourceType: Topic
-      role: ResourceOwner
-    - clusterName: test-cluster
-      name: test-cluster-4
-      principal: User:schemaregistryUser
-      resources:
-      - name: id_schemaregistry_operator
-        patternType: LITERAL
-        resourceType: Group
-      - name: _confluent-license
-        patternType: LITERAL
-        resourceType: Topic
-      - name: _schemas_schemaregistry_operator
-        patternType: LITERAL
-        resourceType: Topic
-      role: ResourceOwner
-    - clusterName: test-cluster
-      name: test-cluster-5
-      principal: User:controlcenterAdmin
-      role: SystemAdmin
-    - clusterName: test-cluster
-      name: test-cluster-6
-      principal: User:superUser
-      role: SystemAdmin
-    - name: test-cluster-7
-      clusterName: test-cluster
-      principal: User:alice
-      resources:
-      - name: test
-        patternType: PREFIXED
-        resourceType: Topic
-      # - name: test
-      #   patternType: PREFIXED
-      #   resourceType: Group
-      role: ResourceOwner
-    - name: test-cluster-8
-      clusterName: test-cluster
-      principal: User:bob
-      role: SystemAdmin
-# define accounts protected from management    
-    rbac_protected_accounts: "User:superUser"
-# regex to limit the clusters managed with this playbook
-    rbac_cluster_whitelist: ".*"
+    role: DeveloperWrite
+```
 
-# to only apply the rolebindings (delete operation will be bypassed) defined in the input file set the following (default is true)
-this can be used to apply the rolebindings to a new cluster without deleting the existing ones - e.g. when applying select rolebindings from a different cluster 
+### Quota Configuration
 
-    rbac_delete_enabled: false
+```yaml
+quotas:
+  users:
+    - users: alice
+      consumer_byte_rate: 1000000.0
+      producer_byte_rate: 1000000.0
+      request_percentage: 20.0
+  clients:
+    - clients: my-client
+      consumer_byte_rate: 500000.0
+      producer_byte_rate: 500000.0
+```
 
-# quotas management connectivity defined above
+### Connector Configuration
 
-## to only apply the quotas (delete operation will be bypassed) defined in the input file set the following (default is true)
-    quotas_delete_enabled: false
-# sample desired quotas state structure
-    quotas:
-      clients:  
-        - clients: test
-          consumer_byte_rate: 100002.0
-          producer_byte_rate: 100001.0
-          # request_percentage: 30.0
-        # - client_id: test2
-        #   consumer_byte_rate: 100002.0
-        #   producer_byte_rate: 100001.0
-        - clients: test3
-          consumer_byte_rate: 100003.0
-          producer_byte_rate: 100003.0
-          request_percentage: 20.0
-        - clients: test4
-          consumer_byte_rate: 100004.0
-          producer_byte_rate: 100004.0
-          request_percentage: 20.0
-        - clients: default
-          consumer_byte_rate: 100004.0
-          producer_byte_rate: 100004.0
-          request_percentage: 20.0
-      users:          
-        - users: test
-          consumer_byte_rate: 100002.0
-          producer_byte_rate: 100001.0
-          request_percentage: 20.0
-        # - users: test2
-        #   consumer_byte_rate: 100002.0
-        #   producer_byte_rate: 100001.0
-        #   request_percentage: 22.0
-        - users: test3
-          consumer_byte_rate: 100003.0
-          producer_byte_rate: 100003.0
-          request_percentage: 23.0
-          clients:
-            - clients: test
-              consumer_byte_rate: 100001.0
-              producer_byte_rate: 100001.0
-              request_percentage: 21.0
-            - clients: test2
-              consumer_byte_rate: 100002.0
-              producer_byte_rate: 100002.0
-              request_percentage: 23.0
-            # - clients: test3
-            #   consumer_byte_rate: 100003.0
-            #   producer_byte_rate: 100003.0
-            #   request_percentage: 23.0
-        - users: default
-          consumer_byte_rate: 100002.0
-          producer_byte_rate: 100001.0
-          request_percentage: 20.0
-          clients:
-            - clients: test
-              consumer_byte_rate: 100001.0
-              producer_byte_rate: 100001.0
-              request_percentage: 21.0
+```yaml
+connectors:
+  - name: datagen-source
+    connector.class: io.confluent.kafka.connect.datagen.DatagenConnector
+    kafka.topic: test-topic
+    quickstart: stock_trades
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: http://schema-registry:8081
+```
 
-# Zookeeper ACLs management connectivity defined above - note Zookeeper ACLs do not use cluster registry - must use Kafka Cluster ID
-# sample desired ACL state structure
-    zacls:
-    - patterns:
-      - entries:
-        - host: '*'
-          operation: READ
-          permission: ALLOW
-        pattern_type: PREFIXED
-        resource_name: bobtest
-        resource_type: GROUP
-      - entries:
-        - host: '*'
-          operation: READ
-          permission: ALLOW
-        pattern_type: PREFIXED
-        resource_name: bobtest
-        resource_type: TOPIC
-      principal: User:Bob
-    - patterns:
-      - entries:
-        - host: '*'
-          operation: READ
-          permission: ALLOW
-        - host: '*'
-          operation: WRITE
-          permission: ALLOW
-        pattern_type: PREFIXED
-        resource_name: test
-        resource_type: GROUP
-      - entries:
-        - host: '*'
-          operation: READ
-          permission: ALLOW
-        pattern_type: PREFIXED
-        resource_name: test
-        resource_type: TOPIC
-      principal: User:alice
+### Schema Configuration
 
-# Centralized ACLs management connectivity defined above - note Centralized ACLs do not use cluster registry - must use Kafka Cluster ID
-# sample desired ACL state structure
-    cacls:
-    - patterns:
-      - entries:
-        - host: '*'
-          operation: READ
-          permission: ALLOW
-        pattern_type: PREFIXED
-        resource_name: bobtest
-        resource_type: GROUP
-      - entries:
-        - host: '*'
-          operation: READ
-          permission: ALLOW
-        pattern_type: PREFIXED
-        resource_name: bobtest
-        resource_type: TOPIC
-      principal: User:Bob
-    - patterns:
-      - entries:
-        - host: '*'
-          operation: READ
-          permission: ALLOW
-        - host: '*'
-          operation: WRITE
-          permission: ALLOW
-        pattern_type: PREFIXED
-        resource_name: test
-        resource_type: GROUP
-      - entries:
-        - host: '*'
-          operation: READ
-          permission: ALLOW
-        pattern_type: PREFIXED
-        resource_name: test
-        resource_type: TOPIC
-      principal: User:alice
+```yaml
+schemas:
+  topics:
+    - name: my-topic
+      value:
+        schema_file_src_path: "/path/to/schema.avsc"
+        compatibility: "BACKWARD"
+      key:
+        schema_file_src_path: "/path/to/key-schema.avsc"
+```
 
-# Connectors management 
+### Secrets Configuration
 
-    connectors_server_url: http://connect:8083
-    # for authentication
-    connectors_user:
-    connectors_user_password:
-    connectors_dump_file: true
-    connectors_dump_destination: /tmp/connectors_dump_out.yml
-    connectors:
-      - connector.class: io.confluent.kafka.connect.datagen.DatagenConnector
-        kafka.topic: stock_trades
-        key.converter: io.confluent.connect.avro.AvroConverter
-        key.converter.schema.registry.url: http://sr:8081
-        name: DatagenTest
-        quickstart: stock_trades
-        schema.registry.url: http://sr:8081
-        value.converter: io.confluent.connect.avro.AvroConverter
-        value.converter.schema.registry.url: http://sr:8081
-      - connector.class: io.confluent.kafka.connect.datagen.DatagenConnector
-        kafka.topic: purchases
-        key.converter: io.confluent.connect.avro.AvroConverter
-        key.converter.schema.registry.url: http://sr:8081
-        name: DatagenTestOrders
-        quickstart: purchases
-        schema.registry.url: http://sr:8081
-        value.converter: io.confluent.connect.avro.AvroConverter
-        value.converter.schema.registry.url: http://sr:8081
-    connectors_delete_enabled: true
-# Usage
+```yaml
+secrets:
+  - path: "database"
+    key: "username"
+    secret: "db_user"
+  - path: "database"
+    key: "password"
+    secret: "supersecret123"
+```
 
-## Common
+## Safety Features
 
-### Verify the execution plan without applying it - dry-run
-ansible-playbook -i inventory.yml -e @vars.yml --check resource_specific_playbook.yml
-### Verify the execution plan without applying it - dry-run, print the plan
-ansible-playbook -i inventory.yml -e @vars.yml --check resource_specific_playbook.yml -vv
+### Protected Resources
 
-## Topics
+Each role includes protection mechanisms:
 
-### Dry-run
-ansible-playbook -i hosts_test.yml topics_management.yml  -vv --check
-### Apply 
-ansible-playbook -i hosts_test.yml topics_management.yml
+- **Topics**: `topic_protected` regex (default: `^_confluent.*|^connect.*|^ksql.*`)
+- **RBAC**: `rbac_protected_accounts` for critical users
+- **Secrets**: `secret_protected` regex for Connect internals
+- **Schemas**: `topic_protected` for internal topics
 
-## Rolebindings
+### Delete Controls
 
-### Dry-run
-ansible-playbook -i hosts_test.yml rbac_management.yml  -vv --check
-### Apply 
-ansible-playbook -i hosts_test.yml rbac_management.yml
+Delete operations are controlled by flags:
 
-## Quotas
+- `topic_delete_enabled` (default: `false`)
+- `rbac_delete_enabled` (default: `true`)
+- `quotas_delete_enabled` (default: `true`)
+- `connectors_delete_enabled` (default: `true`)
+- `secret_delete_enabled` (default: `false`)
 
-### Dry-run
-ansible-playbook -i hosts_test.yml quota_management.yml  -vv --check
-### Apply 
-ansible-playbook -i hosts_test.yml quota_management.yml
+### State Backup
 
-## Zookeeper ACLs
-### Dry-run
-ansible-playbook -i hosts_test.yml zacl_management.yml  -vv --check
-### Apply 
-ansible-playbook -i hosts_test.yml zacl_management.yml
+All roles support dumping current state:
 
-## Centralized ACLs
+```yaml
+# Enable state dump
+<role>_dump_file: true
+<role>_dump_destination: /tmp/<role>_dump_out.yml
+```
 
-### Dry-run
-ansible-playbook -i hosts_test.yml cacl_management.yml  -vv --check
-### Apply 
-ansible-playbook -i hosts_test.yml cacl_management.yml
+## Check Mode Support
 
-## Connectors
+All playbooks support Ansible's check mode for dry-run operations:
 
-### Dry-run
-ansible-playbook -i hosts_test.yml connectors_management.yml  -vv --check
-### Apply 
-ansible-playbook -i hosts_test.yml connectors_management.yml
+```bash
+# Preview changes without applying
+ansible-playbook -i inventory.yml playbook.yml --check -vv
+```
 
-# sample desired Comprehensive Schema state configuration - can be managed in an external file
+## Authentication Methods
 
-schemas: <br>
-       record_schemas: <br>
-         - record_name: "com.mycorp.mynamespace.recordonlyavro" <br>
-           schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
-           schema_delete_all: true <br>
-         - record_name: "com.mycorp.mynamespace.recordonlyproto" <br>
-           schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto" <br>
-           schema_delete_curr: true <br>
-         - record_name: "com.mycorp.mynamespace.recordonlyjson" <br>
-           schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
-       topics: <br>
-         - name: test <br>
-           key: <br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
-           value: <br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
-             schema_delete_all: true # Optional Delete Switch you can add to delete  schema all versions for the subject/scope <br>
-             record_schemas: <br>
-                  - record_name: "com.mycorp.mynamespace.address" <br>
-                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
-         - name: test2 <br>
-           key: <br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto" <br>
-             record_schemas: <br>
-                  - record_name: "com.mycorp.mynamespace.address" <br>
-                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto" <br>
-           value: <br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.proto" <br>
-             schema_delete_curr: true # Optional Delete Switch you can add to delete  schema all versions for the subject/scope <br>
-         - name: test3 <br>
-           key: <br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
-             compatibility: "FORWARD" #--> Compatibility is an optional parameter; The schema management process sets a default 'BACKWARD' if not specified <br>
-             record_schemas: <br>
-                  - record_name: "com.mycorp.mynamespace.address" <br>
-                    compatibilty: "FORWARD" <br>
-                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
-                    schema_delete_all: true <br>
-                  - record_name: "com.mycorp.mynamespace.occupation" <br>
-                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
-           value: <br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
-             record_schemas: <br>
-                  - record_name: "com.mycorp.mynamespace.address" <br>
-                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
-                  - record_name: "com.mycorp.mynamespace.occupation" <br>
-                    schema_file_src_path: "/home/ubuntu/Schema/testvalue.json" <br>
-         - name: test4 <br>
-           key: <br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
-           value: <br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc" <br>
-         - name: test5 <br>
-           key: <br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc"<br>
-        - name: test6<br>
-           value:<br>
-             schema_file_src_path: "/home/ubuntu/Schema/testvalue.avsc"<br>
-        - name: _confluent-internal # We can protect the schema of internal topics from being modified...So the mentioned topic will not have any effect when running the process<br>
-         value:<br>
-             schema_file_src_path: "/home/ubuntu/Schema/internalvalue.avsc"  
+### Basic Authentication
 
-###### Backup and Restore Schemas
+For most roles (topics, quotas, zacls, connectors, schemas, secrets):
+```yaml
+rest_user: admin
+rest_user_password: admin
+rest_server_url: https://kafka1.confluent.io:8090
+```
 
-Back up Schemas in an existing cluster setting the dump_only variable to true
+For RBAC and Centralized ACL management:
+```yaml
+mds_user: mds
+mds_user_password: mds
+mds_server_url: https://kafka1.confluent.io:8090
+```
 
-/*ansible-playbook --private-key ${PRIV_KEY_FILE} -i mrchostsrbacmetric.yml --extra-vars "@./schemadef.yml" --extra-vars "dump_only=true" schemas_management.yml -vvvv*/
+### OAuth Authentication
 
-Restore  Schemas in an new cluster setting the restore_only=truevariable to true
+```yaml
+oauth_enabled: true
+oauth_token_uri: https://oauth-server.com/oauth2/token
+oauth_client_id: client-id
+oauth_client_secret: client-secret
+```
 
-ansible-playbook --private-key ${PRIV_KEY_FILE} -i mrchostsrbacdata.yml --extra-vars "@./schema_dump_out.yml"  --extra-vars "restore_only=true" schemas_management.yml -vvvv
+### TLS/SSL Configuration
 
+```yaml
+client_tls_cert: /path/to/client.crt
+client_tls_key: /path/to/client.key
+ca_tls_path: /path/to/ca.crt
+```
 
-###### Use of TLS
+## Environment-Specific Configuration
 
-Set the following variables in the playbook:
+### Development Environment
 
-**client_tls_cert** - path to the client certificate
+```yaml
+# Relaxed settings for development
+topic_delete_enabled: true
+rbac_delete_enabled: true
+topic_protected: ^_confluent.*
+```
 
-**client_tls_key**  - path to the client private key
+### Production Environment
 
-**ca_tls_path**     - path to the CA certificate
+```yaml
+# Strict settings for production
+topic_delete_enabled: false
+rbac_delete_enabled: false
+topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
+rbac_protected_accounts: "User:superUser|User:systemAdmin"
+```
 
-When used with OAUTH the following setting can be used to enable TLS authentication with IDP:
+## Inventory Examples
 
-**idp_tls_cert** - path to the IDP certificate
+The project includes several inventory templates:
 
-**idp_tls_key**  - path to the IDP private key
+- `hosts_sample.yml` - Complete configuration example
+- `hosts_sample_schema.yml` - Schema-focused configuration
+- `hosts_aws.yml` - AWS-specific configuration
 
-**idp_ca_tls_path**     - path to the IDP CA certificate
+## Troubleshooting
+
+### Common Issues
+
+1. **Authentication Failures**: Verify credentials and API endpoints
+2. **Permission Errors**: Check user roles and RBAC permissions
+3. **Connection Issues**: Verify network connectivity and TLS settings
+4. **State Conflicts**: Use check mode to preview changes
+
+### Debug Mode
+
+Enable verbose logging:
+
+```bash
+ansible-playbook playbook.yml -vvv
+```
+
+### State Validation
+
+Dump current state before making changes:
+
+```bash
+ansible-playbook playbook.yml -e <role>_dump_file=true --check
+```
+
+## Dependencies
+
+- Ansible 2.9+
+- Python `requests` library
+- Confluent Platform binaries (for quota and partition management)
+- Network access to Confluent Platform APIs
+
+## Examples
+
+See the `examples/` directory for complete configuration examples for each role.
+
+## Contributing
+
+1. Follow existing role patterns and naming conventions
+2. Include comprehensive error handling
+3. Support both check mode and regular execution
+4. Add appropriate protection mechanisms
+5. Document all variables and usage examples
+
+## License
+
+See LICENSE file for details.

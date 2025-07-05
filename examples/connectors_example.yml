@@ -1,0 +1,241 @@
+---
+# Example connectors configuration for Kafka Connect Management
+# This file demonstrates how to structure connectors for the Connectors Management role
+#
+# Structure:
+# - name: Unique connector name
+# - connector.class: Fully qualified connector class name
+# - Additional connector-specific configuration properties
+#
+# The Connectors Management role uses the Kafka Connect REST API
+# and supports creating, updating, and deleting connectors
+#
+# Safety Features:
+# - connectors_delete_enabled: Controls deletion operations (default: true)
+# - Connector validation and health checking
+
+connectors:
+  # Source connectors - bring data into Kafka
+
+  # Datagen connector for testing and development
+  - name: datagen-users
+    connector.class: io.confluent.kafka.connect.datagen.DatagenConnector
+    kafka.topic: users
+    quickstart: users
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: http://schema-registry:8081
+    max.interval: 1000
+    iterations: 1000000
+
+  - name: datagen-pageviews
+    connector.class: io.confluent.kafka.connect.datagen.DatagenConnector
+    kafka.topic: pageviews
+    quickstart: pageviews
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: http://schema-registry:8081
+    max.interval: 500
+    iterations: 1000000
+
+  # JDBC source connector for MySQL
+  - name: mysql-source-users
+    connector.class: io.confluent.connect.jdbc.JdbcSourceConnector
+    connection.url: jdbc:mysql://mysql:3306/mydb
+    connection.user: ${secrettransform:database:username:secret}
+    connection.password: ${secrettransform:database:password:secret}
+    table.whitelist: users,orders,products
+    mode: incrementing
+    incrementing.column.name: id
+    topic.prefix: mysql-
+    poll.interval.ms: 30000
+    batch.max.rows: 1000
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: http://schema-registry:8081
+
+  # JDBC source with timestamp mode
+  - name: postgres-source-events
+    connector.class: io.confluent.connect.jdbc.JdbcSourceConnector
+    connection.url: jdbc:postgresql://postgres:5432/eventdb
+    connection.user: ${secrettransform:postgres:username:secret}
+    connection.password: ${secrettransform:postgres:password:secret}
+    table.whitelist: events
+    mode: timestamp
+    timestamp.column.name: updated_at
+    topic.prefix: postgres-
+    poll.interval.ms: 60000
+    validate.non.null: false
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: http://schema-registry:8081
+
+  # File source connector
+  - name: file-source-logs
+    connector.class: org.apache.kafka.connect.file.FileStreamSourceConnector
+    file: /var/log/app.log
+    topic: application-logs
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: org.apache.kafka.connect.storage.StringConverter
+
+  # Spooldir source for CSV files
+  - name: spooldir-csv-source
+    connector.class: com.github.jcustenborder.kafka.connect.spooldir.SpoolDirCsvSourceConnector
+    input.path: /var/spool/kafka-connect-spooldir/input
+    finished.path: /var/spool/kafka-connect-spooldir/finished
+    error.path: /var/spool/kafka-connect-spooldir/error
+    topic: csv-data
+    csv.first.row.as.header: true
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: http://schema-registry:8081
+
+  # Sink connectors - send data from Kafka to external systems
+
+  # S3 sink connector
+  - name: s3-sink-analytics
+    connector.class: io.confluent.connect.s3.S3SinkConnector
+    aws.access.key.id: ${secrettransform:s3:access_key_id:secret}
+    aws.secret.access.key: ${secrettransform:s3:secret_access_key:secret}
+    s3.region: us-west-2
+    s3.bucket.name: my-kafka-data-lake
+    topics.regex: analytics-.*
+    flush.size: 1000
+    rotate.interval.ms: 600000
+    rotate.schedule.interval.ms: 86400000
+    timezone: UTC
+    partition.duration.ms: 3600000
+    path.format: YYYY/MM/dd/HH
+    locale: en-US
+    format.class: io.confluent.connect.s3.format.avro.AvroFormat
+    partitioner.class: io.confluent.connect.storage.partitioner.TimeBasedPartitioner
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: http://schema-registry:8081
+
+  # JDBC sink to PostgreSQL
+  - name: postgres-sink-aggregated
+    connector.class: io.confluent.connect.jdbc.JdbcSinkConnector
+    connection.url: jdbc:postgresql://postgres:5432/analytics
+    connection.user: ${secrettransform:postgres:write_username:secret}
+    connection.password: ${secrettransform:postgres:write_password:secret}
+    topics: user-aggregations,order-summaries
+    auto.create: true
+    auto.evolve: true
+    insert.mode: upsert
+    pk.mode: record_key
+    pk.fields: user_id
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: http://schema-registry:8081
+
+  # Elasticsearch sink
+  - name: elasticsearch-sink-search
+    connector.class: io.confluent.connect.elasticsearch.ElasticsearchSinkConnector
+    connection.url: http://elasticsearch:9200
+    connection.username: ${secrettransform:elasticsearch:username:secret}
+    connection.password: ${secrettransform:elasticsearch:password:secret}
+    topics: products,users,orders
+    type.name: _doc
+    key.ignore: false
+    schema.ignore: true
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: org.apache.kafka.connect.json.JsonConverter
+    value.converter.schemas.enable: false
+    batch.size: 100
+    max.buffered.records: 20000
+    linger.ms: 1000
+
+  # HTTP sink connector
+  - name: http-sink-webhook
+    connector.class: io.confluent.connect.http.HttpSinkConnector
+    http.api.url: https://api.example.com/webhook
+    topics: critical-alerts
+    request.method: POST
+    headers: Content-Type:application/json|Authorization:Bearer ${secrettransform:api:token:secret}
+    batch.max.size: 10
+    max.retries: 3
+    retry.backoff.ms: 5000
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: org.apache.kafka.connect.json.JsonConverter
+    value.converter.schemas.enable: false
+
+  # HDFS sink connector
+  - name: hdfs-sink-archive
+    connector.class: io.confluent.connect.hdfs.HdfsSinkConnector
+    hdfs.url: hdfs://namenode:8020
+    topics.regex: archive-.*
+    flush.size: 10000
+    rotate.interval.ms: 3600000
+    hdfs.authentication.kerberos: false
+    format.class: io.confluent.connect.hdfs.parquet.ParquetFormat
+    partitioner.class: io.confluent.connect.storage.partitioner.TimeBasedPartitioner
+    partition.duration.ms: 86400000
+    path.format: yyyy/MM/dd
+    locale: en-US
+    timezone: UTC
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: io.confluent.connect.avro.AvroConverter
+    value.converter.schema.registry.url: http://schema-registry:8081
+
+  # MongoDB sink connector
+  - name: mongodb-sink-events
+    connector.class: com.mongodb.kafka.connect.MongoSinkConnector
+    connection.uri: mongodb://${secrettransform:mongodb:username:secret}:${secrettransform:mongodb:password:secret}@mongodb:27017
+    database: analytics
+    collection: events
+    topics: user-events,system-events
+    max.num.retries: 3
+    retries.defer.timeout: 5000
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter: org.apache.kafka.connect.json.JsonConverter
+    value.converter.schemas.enable: false
+
+# Additional configuration variables (set in inventory or playbook):
+#
+# connectors_server_url: http://connect:8083    # Connect REST API URL
+# connectors_user: connect-user                 # Connect authentication username
+# connectors_user_password: connect-pass       # Connect authentication password
+# connectors_delete_enabled: true              # Enable/disable connector deletion
+# connectors_dump_file: false                  # Enable state dump
+# connectors_dump_destination: /tmp/connectors_dump.yml
+#
+# Example usage:
+# ansible-playbook -i inventory.yml connectors_management.yml -e @examples/connectors_example.yml
+#
+# Preview changes:
+# ansible-playbook -i inventory.yml connectors_management.yml -e @examples/connectors_example.yml --check -vv
+#
+# Common connector classes:
+# Source connectors:
+# - io.confluent.kafka.connect.datagen.DatagenConnector (test data generation)
+# - io.confluent.connect.jdbc.JdbcSourceConnector (database sources)
+# - org.apache.kafka.connect.file.FileStreamSourceConnector (file sources)
+# - com.github.jcustenborder.kafka.connect.spooldir.* (file processing)
+# - io.debezium.connector.* (CDC connectors)
+#
+# Sink connectors:
+# - io.confluent.connect.s3.S3SinkConnector (Amazon S3)
+# - io.confluent.connect.jdbc.JdbcSinkConnector (databases)
+# - io.confluent.connect.elasticsearch.ElasticsearchSinkConnector (Elasticsearch)
+# - io.confluent.connect.hdfs.HdfsSinkConnector (HDFS)
+# - io.confluent.connect.http.HttpSinkConnector (HTTP endpoints)
+# - com.mongodb.kafka.connect.MongoSinkConnector (MongoDB)
+#
+# Key converter options:
+# - org.apache.kafka.connect.storage.StringConverter (string keys)
+# - org.apache.kafka.connect.converters.IntegerConverter (integer keys)
+# - io.confluent.connect.avro.AvroConverter (Avro format)
+#
+# Value converter options:
+# - io.confluent.connect.avro.AvroConverter (Avro with Schema Registry)
+# - org.apache.kafka.connect.json.JsonConverter (JSON format)
+# - org.apache.kafka.connect.storage.StringConverter (string format)
+# - io.confluent.connect.protobuf.ProtobufConverter (Protobuf format)
+#
+# Best practices:
+# - Use Secret Registry for sensitive configuration values
+# - Set appropriate batch sizes and timeouts for performance
+# - Use Schema Registry for structured data (Avro/Protobuf)
+# - Configure proper error handling and dead letter queues
+# - Monitor connector metrics and logs for health status

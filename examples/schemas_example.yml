@@ -1,0 +1,217 @@
+---
+# Example schemas configuration for Schema Registry Management
+# This file demonstrates how to structure schemas for the Schema Management role
+#
+# Structure:
+# - record_schemas: Standalone record schemas (not tied to topics)
+# - topics: Topic-specific schemas with key and value schemas
+#   - key: Key schema configuration
+#   - value: Value schema configuration
+#   - record_schemas: Nested record schemas for complex types
+#
+# The Schema Management role uses the Schema Registry REST API
+# and supports AVRO, JSON, and PROTOBUF schema formats
+#
+# Safety Features:
+# - topic_protected: Regex pattern for protected topics
+# - Backup and restore capabilities
+# - Schema compatibility validation
+
+schemas:
+  # Standalone record schemas (not tied to specific topics)
+  record_schemas:
+    # User profile schema
+    - record_name: "com.example.user.Profile"
+      schema_file_src_path: "/schemas/avro/user-profile.avsc"
+      compatibility: "BACKWARD"
+      schema_delete_all: false
+
+    # Address record schema (reusable)
+    - record_name: "com.example.common.Address"
+      schema_file_src_path: "/schemas/avro/address.avsc"
+      compatibility: "FORWARD"
+
+    # Payment information schema
+    - record_name: "com.example.payment.PaymentInfo"
+      schema_file_src_path: "/schemas/protobuf/payment.proto"
+      compatibility: "FULL"
+
+    # Product catalog schema
+    - record_name: "com.example.catalog.Product"
+      schema_file_src_path: "/schemas/json/product.json"
+      compatibility: "BACKWARD_TRANSITIVE"
+
+  # Topic-specific schemas
+  topics:
+    # User events topic with Avro schemas
+    - name: user-events
+      key:
+        schema_file_src_path: "/schemas/avro/user-key.avsc"
+        compatibility: "BACKWARD"
+      value:
+        schema_file_src_path: "/schemas/avro/user-event.avsc"
+        compatibility: "BACKWARD"
+        schema_delete_all: false
+        record_schemas:
+          - record_name: "com.example.user.UserProfile"
+            schema_file_src_path: "/schemas/avro/user-profile.avsc"
+          - record_name: "com.example.common.Address"
+            schema_file_src_path: "/schemas/avro/address.avsc"
+
+    # Order processing topic with mixed schemas
+    - name: orders
+      key:
+        schema_file_src_path: "/schemas/avro/order-key.avsc"
+        compatibility: "BACKWARD"
+      value:
+        schema_file_src_path: "/schemas/avro/order.avsc"
+        compatibility: "BACKWARD"
+        record_schemas:
+          - record_name: "com.example.order.OrderItem"
+            schema_file_src_path: "/schemas/avro/order-item.avsc"
+          - record_name: "com.example.common.Address"
+            schema_file_src_path: "/schemas/avro/address.avsc"
+          - record_name: "com.example.payment.PaymentInfo"
+            schema_file_src_path: "/schemas/avro/payment-info.avsc"
+
+    # Product catalog with JSON schemas
+    - name: product-catalog
+      key:
+        schema_file_src_path: "/schemas/json/product-key.json"
+        compatibility: "FORWARD"
+      value:
+        schema_file_src_path: "/schemas/json/product.json"
+        compatibility: "FORWARD"
+        record_schemas:
+          - record_name: "com.example.catalog.Category"
+            schema_file_src_path: "/schemas/json/category.json"
+          - record_name: "com.example.catalog.Pricing"
+            schema_file_src_path: "/schemas/json/pricing.json"
+
+    # System metrics with Protobuf
+    - name: system-metrics
+      key:
+        schema_file_src_path: "/schemas/protobuf/metric-key.proto"
+        compatibility: "BACKWARD"
+      value:
+        schema_file_src_path: "/schemas/protobuf/metric.proto"
+        compatibility: "BACKWARD"
+        record_schemas:
+          - record_name: "com.example.metrics.SystemMetric"
+            schema_file_src_path: "/schemas/protobuf/system-metric.proto"
+          - record_name: "com.example.metrics.Timestamp"
+            schema_file_src_path: "/schemas/protobuf/timestamp.proto"
+
+    # Audit logs with string keys and Avro values
+    - name: audit-logs
+      value:
+        schema_file_src_path: "/schemas/avro/audit-log.avsc"
+        compatibility: "BACKWARD_TRANSITIVE"
+        record_schemas:
+          - record_name: "com.example.audit.UserAction"
+            schema_file_src_path: "/schemas/avro/user-action.avsc"
+          - record_name: "com.example.audit.SystemAction"
+            schema_file_src_path: "/schemas/avro/system-action.avsc"
+
+    # Financial transactions (high compatibility requirements)
+    - name: financial-transactions
+      key:
+        schema_file_src_path: "/schemas/avro/transaction-key.avsc"
+        compatibility: "FULL_TRANSITIVE"
+      value:
+        schema_file_src_path: "/schemas/avro/transaction.avsc"
+        compatibility: "FULL_TRANSITIVE"
+        record_schemas:
+          - record_name: "com.example.finance.Account"
+            schema_file_src_path: "/schemas/avro/account.avsc"
+            compatibility: "FULL_TRANSITIVE"
+          - record_name: "com.example.finance.Amount"
+            schema_file_src_path: "/schemas/avro/amount.avsc"
+            compatibility: "FULL_TRANSITIVE"
+
+    # Real-time analytics (schema evolution enabled)
+    - name: analytics-events
+      key:
+        schema_file_src_path: "/schemas/avro/analytics-key.avsc"
+        compatibility: "FORWARD_TRANSITIVE"
+      value:
+        schema_file_src_path: "/schemas/avro/analytics-event.avsc"
+        compatibility: "FORWARD_TRANSITIVE"
+        schema_delete_curr: false
+        record_schemas:
+          - record_name: "com.example.analytics.Event"
+            schema_file_src_path: "/schemas/avro/event.avsc"
+          - record_name: "com.example.analytics.Properties"
+            schema_file_src_path: "/schemas/avro/properties.avsc"
+
+    # Testing topic (allows schema deletion)
+    - name: test-data
+      key:
+        schema_file_src_path: "/schemas/avro/test-key.avsc"
+        compatibility: "NONE"
+      value:
+        schema_file_src_path: "/schemas/avro/test-value.avsc"
+        compatibility: "NONE"
+        schema_delete_all: true
+
+# Additional configuration variables (set in inventory or playbook):
+#
+# Schema Registry connectivity:
+# rest_server_url: https://schema-registry:8081
+# rest_user: sr-user
+# rest_user_password: sr-password
+#
+# TLS configuration:
+# client_tls_cert: /path/to/client.crt
+# client_tls_key: /path/to/client.key
+# ca_tls_path: /path/to/ca.crt
+#
+# Schema management settings:
+# topic_protected: "^_confluent.*|^_connect.*"
+# schema_dump_file: false
+# schema_dump_destination: /tmp/schema_dump.yml
+# dump_latest: true
+# dump_all: false
+# dump_only: false
+# restore_only: false
+# restore_latest: true
+#
+# Example usage:
+# ansible-playbook -i inventory.yml schemas_management.yml -e @examples/schemas_example.yml
+#
+# Preview changes:
+# ansible-playbook -i inventory.yml schemas_management.yml -e @examples/schemas_example.yml --check -vv
+#
+# Backup schemas:
+# ansible-playbook -i inventory.yml schemas_management.yml -e dump_only=true
+#
+# Restore schemas:
+# ansible-playbook -i inventory.yml schemas_management.yml -e restore_only=true -e @schema_dump.yml
+#
+# Schema formats supported:
+# - AVRO: .avsc files with JSON schema definition
+# - JSON: .json files with JSON Schema specification
+# - PROTOBUF: .proto files with Protocol Buffer definition
+#
+# Compatibility levels:
+# - BACKWARD: New schema can read old data
+# - FORWARD: Old schema can read new data
+# - FULL: Both backward and forward compatible
+# - BACKWARD_TRANSITIVE: Backward compatible with all previous versions
+# - FORWARD_TRANSITIVE: Forward compatible with all previous versions
+# - FULL_TRANSITIVE: Both transitive backward and forward compatible
+# - NONE: No compatibility checking
+#
+# Subject naming strategies:
+# - TopicNameStrategy: <topic>-key, <topic>-value
+# - RecordNameStrategy: <record.name>
+# - TopicRecordNameStrategy: <topic>-<record.name>
+#
+# Best practices:
+# - Use BACKWARD compatibility for most use cases
+# - Use FULL compatibility for critical data contracts
+# - Organize schemas in logical directory structures
+# - Use meaningful record names with namespaces
+# - Test schema evolution in development environments
+# - Monitor schema registry metrics and health
+# - Use schema references for shared record types
