@@ -1,0 +1,32 @@
+---
+- name: "Soft delete latest version of {{ _subject_name }}"
+  ansible.builtin.uri:
+    url: "{{ curl_subjects_api_url | trim }}/{{ _subject_name }}/versions/latest"
+    method: DELETE
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    headers:
+      Authorization: "{{ authorization_header }}"
+    status_code: 200
+    return_content: true
+  register: result
+  changed_when: result.status == 200
+  when: _schema_delete_curr | bool
+
+- name: "Hard delete all versions of {{ _subject_name }}"
+  ansible.builtin.uri:
+    url: "{{ curl_subjects_api_url | trim }}/{{ _subject_name }}"
+    method: DELETE
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    headers:
+      Authorization: "{{ authorization_header }}"
+    status_code: 200
+    return_content: true
+  register: result
+  changed_when: result.status == 200
+  when: _schema_delete_all | bool and not (_schema_delete_curr | bool)

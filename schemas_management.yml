@@ -6,6 +6,10 @@
 
   tasks:
 
+    - name: Set Variables
+      import_role:
+        name: common
+
     - name: Process Schemas
       import_role:
         name: schema

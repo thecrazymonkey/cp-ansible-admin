@@ -31,6 +31,7 @@ cp-rest-admin/
 │   ├── secretsregistry/    # Connect Secret Registry
 │   └── common/             # Shared functionality
 ├── examples/               # Example configurations
+├── tests/                  # Integration tests
 ├── settings/               # Configuration files
 ├── *.yml                  # Management playbooks
 └── hosts_*.yml            # Inventory files
@@ -437,6 +438,45 @@ ansible-playbook playbook.yml -e <role>_dump_file=true --check
 ## Examples
 
 See the `examples/` directory for complete configuration examples for each role.
+
+## Testing
+
+### Schema Management Integration Test
+
+The `tests/schemas/` directory contains an end-to-end integration test that exercises the full schema CRUD lifecycle against a live Schema Registry. It covers all three schema types (Avro, Protobuf, JSON Schema) and runs the following steps:
+
+| Step | Description |
+|------|-------------|
+| 0 | Cleanup stale test subjects from previous runs |
+| 1 | Register new subjects (one per schema type) |
+| 2 | Update subject compatibility to FORWARD |
+| 3 | Set global mode to READONLY, verify the playbook restores READWRITE |
+| 4 | Evolve schemas by adding a new field |
+| 5 | Soft delete the latest schema version |
+| 6 | Hard delete all schema versions |
+
+After each step the test verifies the result directly against the Schema Registry REST API.
+
+#### Required Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `SR_URL` | Schema Registry base URL (e.g. `http://localhost:8081`) |
+| `OAUTH_TOKEN_URI` | OAuth token endpoint |
+| `OAUTH_CLIENT_ID` | OAuth client ID |
+| `OAUTH_CLIENT_SECRET` | OAuth client secret |
+
+#### Running the Test
+
+```bash
+SR_URL=http://localhost:8081 \
+OAUTH_TOKEN_URI=https://idp.example.com/oauth2/token \
+OAUTH_CLIENT_ID=my-client \
+OAUTH_CLIENT_SECRET=my-secret \
+  bash tests/schemas/run_test.sh [inventory_path]
+```
+
+The optional `inventory_path` argument defaults to `tests/schemas/inventory.yml`.
 
 ## Contributing
 

@@ -11,7 +11,6 @@ skip_list:
   - package-latest
   - empty-string-compare
   - no-handler
-  - no-log-password
   - fqcn-builtins
   - name
   - var-naming[no-role-prefix]

@@ -1,13 +1,17 @@
 ---
-- name: Authorization Header
-  vars:
-    _user: "{{ sr_user if not oauth_enabled else oauth_client_id }}"
-    _user_password: "{{ sr_user_password if not oauth_enabled else oauth_client_secret }}"
-
-  ansible.builtin.include_tasks: roles/common/tasks/_authorization_header.yml
-
 - name: Schemas Override
   include_tasks: schemas_override.yml
+
+- name: Set Schema Registry Credentials
+  ansible.builtin.include_tasks: _schemas_credentials.yml
+  when: not oauth_enabled | d(false) | bool
+
+- name: Authorization Header
+  vars:
+    _user: "{{ sr_user | d(oauth_client_id) if not oauth_enabled | d(false) | bool else oauth_client_id }}"
+    _user_password: "{{ sr_user_password | d(oauth_client_secret) if not oauth_enabled | d(false) | bool else oauth_client_secret }}"
+
+  ansible.builtin.include_tasks: roles/common/tasks/_authorization_header.yml
 
 - name: Dump Current Schemas
   include_tasks: schemas_dump.yml

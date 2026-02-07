@@ -1,0 +1,17 @@
+---
+# Step 3: Evolve schemas by adding a new field (phone_number)
+# Adding a field is FORWARD compatible for all schema types
+schemas:
+  topics:
+    - name: schema-test-avro
+      value:
+        compatibility: "FORWARD"
+        schema_file_src_path: "tests/schemas/user_v2.avsc"
+    - name: schema-test-proto
+      value:
+        compatibility: "FORWARD"
+        schema_file_src_path: "tests/schemas/user_v2.proto"
+    - name: schema-test-json
+      value:
+        compatibility: "FORWARD"
+        schema_file_src_path: "tests/schemas/user_v2.json"

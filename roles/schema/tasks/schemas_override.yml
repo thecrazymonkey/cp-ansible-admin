@@ -1,9 +1,7 @@
 ---
-- set_fact:
-    sr_user: "{{ schema_registry_ldap_user if schema_registry_ldap_user is defined else sasl_plain_users.schema_registry.principal  }}"
-
-- set_fact:
-    sr_user_password: "{{ schema_registry_ldap_password if schema_registry_ldap_password is defined else sasl_plain_users.schema_registry.password  }}"
+- name: debug tls
+  debug:
+    msg: "{{ tls_enabled  }}"
 
 - set_fact:
     serverlist: "{{ groups[target_group]  }}"
@@ -65,28 +63,6 @@
   set_fact:
     rootcrt_file_path: "{{ local_ssl_file_path }}/{{root_cert_name}}"
   when: mtls|bool or tls_enabled|bool
-
-- set_fact:
-    curl_parameter_str: |
-        --cacert {{ rootcrt_file_path }} --key {{ key_file_path }} --cert {{ crt_file_path }} -u {{ sr_user }}:{{ sr_user_password }}
-  when: mtls|bool
-
-- set_fact:
-    curl_parameter_str: |
-        -u {{ sr_user }}:{{ sr_user_password }}
-  when: not mtls|bool and not tls_enabled|bool
-
-- set_fact:
-    curl_parameter_str: |
-        --cacert {{ rootcrt_file_path }} -u {{ sr_user }}:{{ sr_user_password }}
-  when: tls_enabled|bool and not mtls|bool
-
-- debug:
-    var: curl_parameter_str
-
-- set_fact:
-    curl_req_get_subjects: |
-        curl -sf {{ sr_server_url }}/subjects {{ curl_parameter_str  }}
 
 - set_fact:
     curl_subjects_api_url: |

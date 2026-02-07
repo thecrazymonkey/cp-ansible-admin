@@ -1,0 +1,16 @@
+---
+# Step 2: Update compatibility of all subjects to FORWARD
+schemas:
+  topics:
+    - name: schema-test-avro
+      value:
+        compatibility: "FORWARD"
+        schema_file_src_path: "examples/schemas/user.avsc"
+    - name: schema-test-proto
+      value:
+        compatibility: "FORWARD"
+        schema_file_src_path: "examples/schemas/user.proto"
+    - name: schema-test-json
+      value:
+        compatibility: "FORWARD"
+        schema_file_src_path: "examples/schemas/user.json"

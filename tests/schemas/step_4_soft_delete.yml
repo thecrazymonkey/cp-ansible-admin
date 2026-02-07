@@ -1,0 +1,17 @@
+---
+# Step 4: Soft delete — remove only the latest schema version from all subjects
+schema_update: false
+schemas:
+  topics:
+    - name: schema-test-avro
+      value:
+        schema_delete_curr: true
+        schema_file_src_path: "examples/schemas/user.avsc"
+    - name: schema-test-proto
+      value:
+        schema_delete_curr: true
+        schema_file_src_path: "examples/schemas/user.proto"
+    - name: schema-test-json
+      value:
+        schema_delete_curr: true
+        schema_file_src_path: "examples/schemas/user.json"

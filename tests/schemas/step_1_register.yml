@@ -1,0 +1,14 @@
+---
+# Step 1: Register new subjects — one per schema type
+# Uses defaults: schema_update=true, compatibility=BACKWARD
+schemas:
+  topics:
+    - name: schema-test-avro
+      value:
+        schema_file_src_path: "examples/schemas/user.avsc"
+    - name: schema-test-proto
+      value:
+        schema_file_src_path: "examples/schemas/user.proto"
+    - name: schema-test-json
+      value:
+        schema_file_src_path: "examples/schemas/user.json"
