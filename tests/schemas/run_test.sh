@@ -173,11 +173,9 @@ echo ""
 echo "Step 0: Cleanup stale test subjects"
 for i in "${!SUBJECTS[@]}"; do
     sr_delete "subjects/${SUBJECTS[$i]}"
-    if [[ "$RESPONSE_STATUS" == "200" ]]; then
-        echo "  Cleaned up ${SUBJECTS[$i]} (soft delete)"
-        sr_delete "subjects/${SUBJECTS[$i]}?permanent=true"
-        echo "  Cleaned up ${SUBJECTS[$i]} (hard delete)"
-    fi
+    echo "  Cleaned up ${SUBJECTS[$i]} (soft delete)"
+    sr_delete "subjects/${SUBJECTS[$i]}?permanent=true"
+    echo "  Cleaned up ${SUBJECTS[$i]} (hard delete)"
 done
 pass "Step 0: Cleanup"
 
