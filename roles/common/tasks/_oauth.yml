@@ -15,11 +15,13 @@
     timeout: 30
   register: result
   check_mode: false
-  # no_log: true
-- ansible.builtin.set_fact:
+  no_log: true
+- name: Set OAuth Authorization Header
+  ansible.builtin.set_fact:
     authorization_header: "Bearer {{ result.json.access_token }}"
   no_log: true
 
-- ansible.builtin.debug:
+- name: Debug OAuth token obtained
+  ansible.builtin.debug:
     msg: "OAuth token obtained successfully"
     verbosity: 3

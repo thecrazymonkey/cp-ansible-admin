@@ -15,7 +15,7 @@
       copy:
         content: "{{to_dump | to_nice_yaml(indent=2)}}"
         dest: "{{rbac_dump_destination}}"
-        mode: "644"
+        mode: '0644'
       check_mode: false
       vars:
         to_dump: "{{ {'rolebindings': rbac_mapped} }}"

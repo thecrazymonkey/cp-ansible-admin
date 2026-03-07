@@ -1,7 +1,7 @@
 ---
 # Get cluster_id v1 API
 - name: Get cluster_id
-  uri:
+  ansible.builtin.uri:
     url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters"
     method: GET
     validate_certs: true
@@ -16,6 +16,7 @@
   register: result
   check_mode: false
 
-- set_fact:
+- name: Set cluster_id fact
+  ansible.builtin.set_fact:
     cluster_id: "{{result.content | from_json | json_query('data[0].cluster_id')}}"
   check_mode: false

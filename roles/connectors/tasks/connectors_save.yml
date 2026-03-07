@@ -6,7 +6,7 @@
       copy:
         content: "{{to_dump | to_nice_yaml(indent=2)}}"
         dest: "{{connectors_dump_destination}}"
-        mode: "644"
+        mode: '0644'
       check_mode: false
       vars:
         to_dump: "{{ {'connectors': connectors_current} }}"

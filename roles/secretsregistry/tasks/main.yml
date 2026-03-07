@@ -20,22 +20,6 @@
   register: health_check
   check_mode: false
 
-- name: Test Secret Registry Paths Endpoint
-  uri:
-    url: "{{ rest_server_url }}/secret/paths"
-    method: GET
-    validate_certs: true
-    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
-    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
-    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
-    timeout: "{{ secret_timeout }}"
-    headers:
-      Authorization: "{{ authorization_header }}"
-      Content-Type: "application/json"
-    status_code: [200, 404]
-  register: secret_registry_check
-  check_mode: false
-
 - name: Dump secrets
   include_tasks: secrets_dump.yml
 

@@ -160,6 +160,7 @@
 - name: Debug all schema operations
   ansible.builtin.debug:
     var: all_schema_operations
+    verbosity: 2
 
 # =============================================================================
 # Get current subjects and optionally delete all
@@ -230,22 +231,3 @@
   when:
     - all_schema_operations | length > 0
     - not ansible_check_mode
-
-# =============================================================================
-# Cleanup certificate files
-# =============================================================================
-
-- name: Remove the Certificate Key File from the controller node
-  ansible.builtin.file:
-    path: "{{ key_file_path }}"
-    state: absent
-
-- name: Remove the Certificate File from the controller node
-  ansible.builtin.file:
-    path: "{{ crt_file_path }}"
-    state: absent
-
-- name: Remove the Root Certificate File from the controller node
-  ansible.builtin.file:
-    path: "{{ rootcrt_file_path }}"
-    state: absent

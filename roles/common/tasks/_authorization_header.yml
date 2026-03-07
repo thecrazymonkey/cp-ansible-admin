@@ -1,4 +1,6 @@
-- ansible.builtin.include_tasks: roles/common/tasks/_oauth.yml
+- name: Get OAuth Authorization Header
+  ansible.builtin.include_tasks: roles/common/tasks/_oauth.yml
   when: oauth_enabled|bool
-- ansible.builtin.include_tasks: roles/common/tasks/_basic_auth.yml
+- name: Get Basic Auth Authorization Header
+  ansible.builtin.include_tasks: roles/common/tasks/_basic_auth.yml
   when: not oauth_enabled|bool

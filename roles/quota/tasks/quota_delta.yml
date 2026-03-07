@@ -19,7 +19,7 @@
     quotas_entity: "{{ quotas[entity]|d([]) }}"
     quotas_current_entity: "{{ quotas_current[entity]|d([]) }}"
 
-- name: Process clients quotas
+- name: Process clients quotas  # noqa: jinja[invalid]
   # check the user quotas for client specific entries
   ansible.builtin.include_tasks: quota_helper.yml
   loop: "{{ (quotas_entity + quotas_current_entity) | groupby(entity)}}"

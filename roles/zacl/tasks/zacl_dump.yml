@@ -1,32 +1,36 @@
 ---
 # build a configuration structure from current state of rolebindings in the cluster
-- set_fact:
+- name: Initialize zacl list
+  ansible.builtin.set_fact:
     zacl_list: []
 
 - name: Get All ACLs
-  uri:
+  ansible.builtin.uri:
     url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters/{{cluster_id}}/acls"
     method: GET
-    validate_certs: false
-    force_basic_auth: true
-    force: true
-    url_username: "{{rest_user}}"
-    url_password: "{{rest_user_password}}"
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    headers:
+      Authorization: "{{ authorization_header }}"
   register: zacl_list_tmp
   check_mode: false
 
-- debug:
+- name: Debug raw ACL response
+  ansible.builtin.debug:
     msg: "{{zacl_list_tmp}}"
     verbosity: 3
 
 - name: Get List Of Principals, Acls and Resources
-  set_fact:
+  ansible.builtin.set_fact:
     zacl_list: '{{ zacl_list +  [ { "principal": item.principal,
         "pattern_type": item.pattern_type, "resource_name" : item.resource_name,
         "resource_type" : item.resource_type,
         "host": item.host, "permission" : item.permission, "operation": item.operation} ] }}'
   loop: "{{ zacl_list_tmp.json.data }}"
 
-- debug:
+- name: Debug zacl list
+  ansible.builtin.debug:
     var: zacl_list
     verbosity: 2

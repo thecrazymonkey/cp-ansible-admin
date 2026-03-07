@@ -1,13 +1,14 @@
 ---
 # build a configuration structure from current state of rolebindings in the cluster
-- set_fact:
+- name: Initialize connectors current state
+  ansible.builtin.set_fact:
     connectors_current: []
 
 - name: Get All Connectors
-  uri:
+  ansible.builtin.uri:
     url: "{{connectors_server_url}}/connectors"
     method: GET
-    validate_certs: false
+    validate_certs: true
     force_basic_auth: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
@@ -25,6 +26,7 @@
   loop_control:
     loop_var: connector_item
 
-- debug:
+- name: Debug connectors current state
+  ansible.builtin.debug:
     var: connectors_current
     verbosity: 3
