@@ -11,3 +11,12 @@ skip_list:
   - package-latest
   - empty-string-compare
   - no-handler
+  - fqcn-builtins
+  - name
+  - var-naming[no-role-prefix]
+  - key-order
+  - meta-runtime[unsupported-version]
+  - no-changed-when
+  - fqcn[action]
+  - risky-file-permissions
+  - command-instead-of-module

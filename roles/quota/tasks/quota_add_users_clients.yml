@@ -3,17 +3,24 @@
 - debug:
     msg:
       - "{{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace('clients'+'=[0-9a-zA-Z_.-]{1,},')}}"
+    verbosity: 2
   loop: "{{quota.clients}}"
 
 
 # Low level quota operations - using Admin API
 - name: Add quotas
 # not supported via REST API yet - needs direct call to Kafka Admin API
-  shell: |
-    {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
-      --alter --add-config {{item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace('clients'+'=[0-9a-zA-Z_.-]{1,},')}} \
-      --entity-type users {{ '--entity-default' if quota.users=='default' else '--entity-name '+ quota.users }} \
-      --entity-type clients {{ '--entity-default' if item.clients=='default' else '--entity-name '+ item.clients }} --command-config {{kafka_broker_client_config_file}}
+  ansible.builtin.command:
+    argv: >-
+      {{ [binary_base_path ~ '/bin/kafka-configs',
+          '--bootstrap-server', kafka_broker_hostname ~ ':' ~ kafka_broker_port,
+          '--alter', '--add-config',
+          item.keys()|zip(item.values())|map('join', '=')|join(',')|regex_replace('clients'+'=[0-9a-zA-Z_.-]{1,},'),
+          '--entity-type', 'users']
+         + (['--entity-default'] if quota.users=='default' else ['--entity-name', quota.users])
+         + ['--entity-type', 'clients']
+         + (['--entity-default'] if item.clients=='default' else ['--entity-name', item.clients])
+         + ['--command-config', kafka_broker_client_config_file] }}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: quotas_result
@@ -26,4 +33,3 @@
     var: item.stdout|d("")
     verbosity: 3
   loop: "{{quotas_result.results}}"
-

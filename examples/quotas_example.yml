@@ -1,0 +1,142 @@
+---
+# Example quotas configuration for Confluent Platform Quota Management
+# This file demonstrates how to structure quotas for the Quota Management role
+#
+# Structure:
+# - users: User-level quotas (per user across all clients)
+# - clients: Client-level quotas (per client across all users)
+# - Nested structure: User quotas can contain client-specific overrides
+#
+# The Quota Management role uses the Kafka Admin API (CLI-based)
+# as REST API support is not yet available for quota management
+#
+# Safety Features:
+# - quotas_delete_enabled: Controls deletion operations (default: true)
+# - Binary path configuration required for CLI operations
+
+quotas:
+  # User-level quotas
+  users:
+    # Basic user quota with rate limits
+    - users: alice
+      consumer_byte_rate: 1000000.0  # 1 MB/s
+      producer_byte_rate: 500000.0   # 500 KB/s
+      request_percentage: 20.0       # 20% of request time
+
+    # Power user with higher limits
+    - users: data-engineer
+      consumer_byte_rate: 10000000.0  # 10 MB/s
+      producer_byte_rate: 5000000.0   # 5 MB/s
+      request_percentage: 50.0        # 50% of request time
+
+    # Service account with moderate limits
+    - users: analytics-service
+      consumer_byte_rate: 2000000.0   # 2 MB/s
+      producer_byte_rate: 1000000.0   # 1 MB/s
+      request_percentage: 30.0        # 30% of request time
+
+    # User with client-specific overrides
+    - users: bob
+      consumer_byte_rate: 800000.0    # Default for all bob's clients
+      producer_byte_rate: 400000.0
+      request_percentage: 15.0
+      clients:
+        # Override for specific client used by bob
+        - clients: high-priority-app
+          consumer_byte_rate: 2000000.0  # Higher limit for this client
+          producer_byte_rate: 1000000.0
+          request_percentage: 40.0
+
+        # Another client with different limits
+        - clients: batch-processor
+          consumer_byte_rate: 5000000.0  # Very high for batch jobs
+          producer_byte_rate: 100000.0   # Low producer rate
+          request_percentage: 25.0
+
+    # Default user quota (applies to all users not explicitly configured)
+    - users: default
+      consumer_byte_rate: 500000.0    # 500 KB/s default
+      producer_byte_rate: 250000.0    # 250 KB/s default
+      request_percentage: 10.0        # 10% default
+      clients:
+        # Default but with client-specific overrides
+        - clients: monitoring-client
+          consumer_byte_rate: 1000000.0  # Higher for monitoring
+          producer_byte_rate: 100000.0
+          request_percentage: 15.0
+
+  # Client-level quotas (across all users)
+  clients:
+    # High-throughput application
+    - clients: real-time-analytics
+      consumer_byte_rate: 20000000.0  # 20 MB/s
+      producer_byte_rate: 10000000.0  # 10 MB/s
+      request_percentage: 60.0        # 60% of request time
+
+    # ETL batch processing client
+    - clients: etl-processor
+      consumer_byte_rate: 50000000.0  # 50 MB/s for large batches
+      producer_byte_rate: 5000000.0   # 5 MB/s
+      request_percentage: 80.0        # High request percentage
+
+    # Development and testing client
+    - clients: dev-client
+      consumer_byte_rate: 100000.0    # 100 KB/s (low for dev)
+      producer_byte_rate: 100000.0    # 100 KB/s
+      request_percentage: 5.0         # Low priority
+
+    # Monitoring and alerting client
+    - clients: monitoring-system
+      consumer_byte_rate: 2000000.0   # 2 MB/s
+      producer_byte_rate: 500000.0    # 500 KB/s
+      request_percentage: 25.0        # Medium priority
+
+    # Backup and disaster recovery
+    - clients: backup-client
+      consumer_byte_rate: 30000000.0  # 30 MB/s for backups
+      producer_byte_rate: 1000000.0   # 1 MB/s
+      request_percentage: 70.0        # High for backup operations
+
+    # Default client quota (applies to all clients not explicitly configured)
+    - clients: default
+      consumer_byte_rate: 1000000.0   # 1 MB/s default
+      producer_byte_rate: 500000.0    # 500 KB/s default
+      request_percentage: 20.0        # 20% default
+
+# Additional configuration variables (set in inventory or playbook):
+#
+# kafka_broker_hostname: kafka1.example.com     # Kafka broker hostname
+# kafka_broker_port: 9092                       # Kafka broker port
+# kafka_broker_client_config_file: ./settings/client.properties
+# binary_base_path: /home/confluent/confluent-7.0.1
+# secrets_protection_masterkey: encryption-key  # For encrypted configs
+# quotas_delete_enabled: true                   # Enable/disable quota deletion
+# quotas_dump_file: false                       # Enable state dump
+# quotas_dump_destination: /tmp/quotas_dump.yml
+#
+# Example usage:
+# ansible-playbook -i inventory.yml quota_management.yml -e @examples/quotas_example.yml
+#
+# Preview changes:
+# ansible-playbook -i inventory.yml quota_management.yml -e @examples/quotas_example.yml --check -vv
+#
+# Quota types explanation:
+# - consumer_byte_rate: Maximum bytes per second for consumption
+# - producer_byte_rate: Maximum bytes per second for production
+# - request_percentage: Maximum percentage of request handling time
+#
+# Hierarchy (most specific wins):
+# 1. User + Client specific quota (highest priority)
+# 2. User-level quota
+# 3. Client-level quota
+# 4. Default quotas (lowest priority)
+#
+# Units:
+# - Byte rates are in bytes per second (1000000 = 1 MB/s)
+# - Request percentage is 0-100 (percentage of total request time)
+#
+# Best practices:
+# - Set conservative defaults and explicit limits for high-usage clients/users
+# - Monitor quota violations in Control Center or through JMX metrics
+# - Use client-specific overrides for applications with varying usage patterns
+# - Consider time-based quotas for batch processing windows

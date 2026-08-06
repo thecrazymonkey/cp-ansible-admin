@@ -8,6 +8,13 @@ binary_base_path: /home/confluent/confluent-7.0.1
 # confluent cluster describe --url ...
 cluster_id: ""
 proxy_env: {}
-acl_delete_enabled: true
+# shared timeout (seconds) for REST API calls
+api_timeout: 30
+# timeout (seconds) for the IdP token call - a separate knob because the token
+# endpoint is a different host and is often slower than the Confluent APIs
+oauth_timeout: "{{ api_timeout }}"
+# destructive - must be explicitly enabled per run/inventory
+acl_delete_enabled: false
 url_cluster_prefix: "/kafka"
-
+authorization_header: ""
+oauth_enabled: false

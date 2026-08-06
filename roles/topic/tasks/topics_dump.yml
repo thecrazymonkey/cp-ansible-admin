@@ -1,43 +1,69 @@
 ---
 # build a configuration structure from current state of topics/configs in the cluster
+# Requires Confluent Platform 7.0 or later: the topics list must carry
+# partitions_count, and the /topics/-/configs batch endpoint must be available.
 - name: Get Topics List
   uri:
     url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics"
     method: GET
-    validate_certs: false
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
     force_basic_auth: true
-    url_username: "{{rest_user}}"
-    url_password: "{{rest_user_password}}"
+    headers:
+      Authorization: "{{ authorization_header }}"
     body_format: json
+    timeout: "{{ api_timeout }}"
   register: topics_list_temp
-  check_mode: no
+  check_mode: false
 
 - name: Set Only Essential Fields and Non-protected Topics
-# cater for 6.2 -> 7.0 API change
-  set_fact: 
-     topics_list: '{{ topics_list | default([]) +  [{ "topic_name": item.topic_name, "replication_factor" : item.replication_factor, "partitions_count" : item.partitions_count }] }}'
-     partitions_defined: true
-  loop: "{{ topics_list_temp.json.data | d([]) }}"
-  when: (test_whitelist|length > 0 and test_protected|length == 0) and item.partitions_count is defined 
+  set_fact:
+    topics_list: "{{ _kept | json_query('[].{topic_name: topic_name, replication_factor: replication_factor, partitions_count: partitions_count}') }}"
   vars:
-    test_whitelist: "{{ item.topic_name|regex_search(topic_whitelist) }}"
-    test_protected: "{{ item.topic_name|regex_search(topic_protected) }}"
+    _whitelisted: "{{ (topics_list_temp.json.data | d([]) | selectattr('topic_name', 'search', topic_whitelist) | list)
+      if topic_whitelist | length > 0 else [] }}"
+    _kept: "{{ (_whitelisted | rejectattr('topic_name', 'search', topic_protected) | list) if topic_protected | length > 0 else _whitelisted }}"
 
+- name: Assert Topics List Carries Partition Counts
+# pre-7.0 responses omit partitions_count, which would surface downstream as a
+# null comparison in the delta rather than an actionable error here
+  ansible.builtin.assert:
+    that: topics_list | selectattr('partitions_count', 'none') | list | length == 0
+    fail_msg: >-
+      The topics API did not return partitions_count for
+      {{ topics_list | selectattr('partitions_count', 'none') | map(attribute='topic_name') | join(', ') }} -
+      Confluent Platform 7.0 or later is required.
+    success_msg: Topics list carries partition counts
+  when: topics_list | length > 0
 
-- name: Set Only Essential Fields and Non-protected Topics
-# cater for 6.2 -> 7.0 API change
-  set_fact: 
-     topics_list: '{{ topics_list | default([]) +  [{ "topic_name": item.topic_name, "replication_factor" : item.replication_factor }] }}'
-     partitions_defined: false
-  loop: "{{ topics_list_temp.json.data | d([]) }}"
-  when: (test_whitelist|length > 0 and test_protected|length == 0) and item.partitions_count is not defined 
-  vars:
-    test_whitelist: "{{ item.topic_name| regex_search(topic_whitelist) }}"
-    test_protected: "{{ item.topic_name| regex_search(topic_protected) }}"
+- name: Get All Topic Configs
+# single batch call for every topic's configs instead of one call per topic
+  uri:
+    url: "{{rest_server_url}}/kafka/v3/clusters/{{cluster_id}}/topics/-/configs"
+    method: GET
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    force_basic_auth: true
+    headers:
+      Authorization: "{{ authorization_header }}"
+    body_format: json
+    status_code: 200
+    timeout: "{{ api_timeout }}"
+  register: configs_list_all
+  check_mode: false
+  when: topics_list | length > 0
 
-- name: Process List Of Topics
-  include_tasks: tasks/topics_dump_tasks.yml
+- name: Build Current Topics State
+  set_fact:
+    topics_current: "{{ topics_current | d([]) + [item | combine({'configs': _configs})] }}"
   loop: "{{ topics_list }}"
-  when: topics_list | d([]) | length > 0
-  loop_control:
-    loop_var: topic_item
+  vars:
+    _configs: "{{ configs_list_all.json.data | d([])
+      | selectattr('topic_name', 'equalto', item.topic_name)
+      | rejectattr('source', 'in', ['DEFAULT_CONFIG', 'STATIC_BROKER_CONFIG'])
+      | json_query('[].{name: name, value: value}') }}"
+  when: topics_list | length > 0

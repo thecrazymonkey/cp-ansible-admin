@@ -1,36 +1,36 @@
 ---
 # beatify for file Writing
 - name: Create entries list
-  set_fact: 
-    acl_list_entries: '{{ acl_list_entries|d([]) +  [ { "tmppk": item.principal+item.pattern_type+item.resource_type+item.resource_name, 
-        "principal": item.principal, 
+  set_fact:
+    acl_list_entries: '{{ acl_list_entries|d([]) +  [ { "tmppk": item.principal+item.pattern_type+item.resource_type+item.resource_name,
+        "principal": item.principal,
         "pattern_type": item.pattern_type, "resource_name" : item.resource_name,
         "resource_type" : item.resource_type,
         "entries" : {"host": item.host, "permission" : item.permission, "operation": item.operation}} ] }}'
   loop: "{{ acl_list }}"
 
-- name: Combine Entries Into A Single List 
+- name: Combine Entries Into A Single List
   set_fact:
     acl_entries: "{{ acl_entries|d([]) + [item.1|combine({'entries':_entries})] }}"
   loop: "{{ acl_list_entries|groupby('tmppk') }}"
   vars:
     _entries: "{{ item.1|map(attribute='entries')|flatten }}"
 
-- name: Combine Patterns Into Single List 
+- name: Combine Patterns Into Single List
   set_fact:
     acl_patterns: '{{ acl_patterns|d([]) + [{"principal": item.principal, "patterns": {"pattern_type": item.pattern_type, "resource_name" : item.resource_name,
         "resource_type" : item.resource_type, "entries": item.entries }}] }}'
   loop: "{{ acl_entries }}"
 
 
-- name: Combine Patterns Into Principals List 
+- name: Combine Patterns Into Principals List
   set_fact:
     acl_patterns_combined: "{{ acl_patterns_combined|d([]) + [item.1|combine({'patterns':_patterns})] }}"
   loop: "{{ acl_patterns|groupby('principal') }}"
   vars:
     _patterns: "{{ item.1|map(attribute='patterns')|flatten }}"
 
-- name: Write to a file  
+- name: Write to a file
   block:
     - name: Prepare For Writing
       set_fact:
@@ -41,11 +41,13 @@
 
     - name: Dump To A File
       delegate_to: 'localhost'
-      copy: content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{acl_dump_destination}}" mode=644
-      check_mode: no
+      copy:
+        content: "{{to_dump | to_nice_yaml(indent=2)}}"
+        dest: "{{acl_dump_destination}}"
+        mode: '0600'
+      check_mode: false
       vars:
-        to_dump: "{{ {varname: acl_mapped} }}"    
-      no_log: False
-  when: 
-    - acl_dump_file
-
+        to_dump: "{{ {varname: acl_mapped} }}"
+      no_log: false
+  when:
+    - acl_dump_file|bool

@@ -1,0 +1,406 @@
+---
+# Example Centralized ACLs configuration for Confluent Platform Centralized ACL Management
+# This file demonstrates how to structure ACLs for the Centralized ACL Management role
+#
+# Structure: (Same as Zookeeper ACLs but managed through MDS)
+# - principal: User or service account (User:username, User:CN=...)
+# - patterns: List of ACL patterns with resource types and permissions
+#   - resource_type: TOPIC, GROUP, CLUSTER, TRANSACTIONAL_ID, DELEGATION_TOKEN
+#   - resource_name: Name or pattern for the resource
+#   - pattern_type: LITERAL (exact match) or PREFIXED (prefix match)
+#   - entries: List of permission entries with host, operation, and permission
+#
+# The Centralized ACL Management role uses the Confluent MDS REST API
+# and provides unified ACL management across multiple clusters
+#
+# Safety Features:
+# - Uses direct Kafka cluster ID (not cluster registry)
+# - Centralized management through MDS
+# - State dumping and backup capabilities
+
+cacls:
+  # Multi-cluster administrator
+  - principal: User:cluster-admin
+    patterns:
+      # Full cluster access across all managed clusters
+      - resource_type: CLUSTER
+        resource_name: kafka-cluster
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: ALL
+            permission: ALLOW
+
+      # Full topic access for administrative tasks
+      - resource_type: TOPIC
+        resource_name: '*'
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: ALL
+            permission: ALLOW
+
+  # Cross-cluster replication service
+  - principal: User:replicator-service
+    patterns:
+      # Read access to source topics for replication
+      - resource_type: TOPIC
+        resource_name: '*'
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Replicator consumer groups
+      - resource_type: GROUP
+        resource_name: connect-replicator
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+      # Write access to destination topics
+      - resource_type: TOPIC
+        resource_name: replica-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: CREATE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+  # Data pipeline service with multi-topic access
+  - principal: User:data-pipeline
+    patterns:
+      # Read from input topics
+      - resource_type: TOPIC
+        resource_name: input-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Write to output topics
+      - resource_type: TOPIC
+        resource_name: output-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: CREATE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Pipeline consumer groups
+      - resource_type: GROUP
+        resource_name: pipeline-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+      # Transactional processing for exactly-once
+      - resource_type: TRANSACTIONAL_ID
+        resource_name: pipeline-tx-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+  # Global monitoring service
+  - principal: User:global-monitor
+    patterns:
+      # Read-only access to all topics for monitoring
+      - resource_type: TOPIC
+        resource_name: '*'
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Global monitoring consumer groups
+      - resource_type: GROUP
+        resource_name: global-monitor
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+      # Cluster metadata access for health monitoring
+      - resource_type: CLUSTER
+        resource_name: kafka-cluster
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+  # Backup and disaster recovery service
+  - principal: User:backup-service
+    patterns:
+      # Read access to all topics for backup
+      - resource_type: TOPIC
+        resource_name: '*'
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Backup consumer groups
+      - resource_type: GROUP
+        resource_name: backup-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+  # Security audit service
+  - principal: User:audit-service
+    patterns:
+      # Read access to audit and security topics
+      - resource_type: TOPIC
+        resource_name: audit-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      - resource_type: TOPIC
+        resource_name: security-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Audit consumer group
+      - resource_type: GROUP
+        resource_name: audit-consumer
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+  # Multi-environment development user
+  - principal: User:dev-lead
+    patterns:
+      # Access to development and staging topics
+      - resource_type: TOPIC
+        resource_name: dev-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: CREATE
+            permission: ALLOW
+          - host: '*'
+            operation: DELETE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+          - host: '*'
+            operation: ALTER
+            permission: ALLOW
+
+      - resource_type: TOPIC
+        resource_name: staging-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Development consumer groups
+      - resource_type: GROUP
+        resource_name: dev-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+  # Analytics platform with specific access patterns
+  - principal: User:analytics-platform
+    patterns:
+      # Read from various data sources
+      - resource_type: TOPIC
+        resource_name: events-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      - resource_type: TOPIC
+        resource_name: metrics-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Write analytics results
+      - resource_type: TOPIC
+        resource_name: analytics-results
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: CREATE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Analytics consumer groups
+      - resource_type: GROUP
+        resource_name: analytics-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+  # Restricted service with explicit denials
+  - principal: User:restricted-service
+    patterns:
+      # Allow access to public data
+      - resource_type: TOPIC
+        resource_name: public-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Explicitly deny access to sensitive data
+      - resource_type: TOPIC
+        resource_name: pii-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: ALL
+            permission: DENY
+
+      - resource_type: TOPIC
+        resource_name: financial-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: ALL
+            permission: DENY
+
+# Additional configuration variables (set in inventory or playbook):
+#
+# mds_user: mds                              # MDS username (must be SystemAdmin)
+# mds_user_password: mds                     # MDS password
+# mds_server_url: https://kafka:8090         # MDS server URL
+# cluster_id: kafka-cluster-id               # Kafka cluster ID (not from registry)
+# cacl_dump_file: false                     # Enable state dump
+# cacl_dump_destination: /tmp/cacl_dump.yml
+#
+# Example usage:
+# ansible-playbook -i inventory.yml cacl_management.yml -e @examples/cacl_example.yml
+#
+# Preview changes:
+# ansible-playbook -i inventory.yml cacl_management.yml -e @examples/cacl_example.yml --check -vv
+#
+# Centralized ACL Management benefits:
+# - Unified ACL management across multiple Kafka clusters
+# - Integration with Confluent RBAC for fine-grained permissions
+# - Centralized audit trail through MDS
+# - Support for complex multi-cluster topologies
+# - Integration with external identity providers
+#
+# Resource types: (Same as Zookeeper ACLs)
+# - TOPIC: Kafka topics
+# - GROUP: Consumer groups
+# - CLUSTER: Kafka cluster
+# - TRANSACTIONAL_ID: Transactional IDs for exactly-once semantics
+# - DELEGATION_TOKEN: Delegation tokens for authentication
+#
+# Pattern types:
+# - LITERAL: Exact resource name match
+# - PREFIXED: Resource name prefix match
+#
+# Operations: (Same as Zookeeper ACLs)
+# - READ, WRITE, CREATE, DELETE, ALTER, DESCRIBE
+# - CLUSTER_ACTION, DESCRIBE_CONFIGS, ALTER_CONFIGS
+# - IDEMPOTENT_WRITE, ALL
+#
+# Permissions:
+# - ALLOW: Grant the operation
+# - DENY: Explicitly deny the operation (takes precedence over ALLOW)
+#
+# Best practices for Centralized ACLs:
+# - Design ACLs with multi-cluster scenarios in mind
+# - Use consistent naming patterns across clusters
+# - Leverage MDS integration for enterprise identity management
+# - Plan for disaster recovery and cluster failover scenarios
+# - Monitor centralized ACL performance and scalability
+# - Use automation for ACL provisioning in multi-cluster environments
+# - Document cross-cluster data flow and access patterns

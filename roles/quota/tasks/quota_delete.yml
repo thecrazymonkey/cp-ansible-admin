@@ -6,10 +6,14 @@
 # Low level quota operations - using Admin API
 - name: Delete quotas
 # not supported via REST API yet - needs direct call to Kafka Admin API
-  shell: |
-    {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
-      --alter --delete-config {{item.delete|join(',')}} \
-      --entity-type {{entity}} {{ '--entity-default' if item[entity]=='default' else '--entity-name '+ item[entity] }} --command-config {{kafka_broker_client_config_file}}
+  ansible.builtin.command:
+    argv: >-
+      {{ [binary_base_path ~ '/bin/kafka-configs',
+          '--bootstrap-server', kafka_broker_hostname ~ ':' ~ kafka_broker_port,
+          '--alter', '--delete-config', item.delete|join(','),
+          '--entity-type', entity]
+         + (['--entity-default'] if item[entity]=='default' else ['--entity-name', item[entity]])
+         + ['--command-config', kafka_broker_client_config_file] }}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: quotas_result
@@ -33,4 +37,3 @@
   vars:
     quota: "{{ item_users }}"
   when: entity == 'users' and 'clients' in item_users
-

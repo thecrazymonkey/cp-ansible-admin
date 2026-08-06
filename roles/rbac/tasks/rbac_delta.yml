@@ -2,19 +2,19 @@
 
 # PK - server+principal and find all Admin deltas
 - debug:
-    msg="Current state>{{ rbac_current }}"
-    verbosity=3
+    msg: "Current state>{{ rbac_current }}"
+    verbosity: 3
 - debug:
-    msg="Desired state>{{ rolebindings }}"  
-    verbosity=3
+    msg: "Desired state>{{ rolebindings }}"
+    verbosity: 3
 
 - name: Initialize Variables
-  set_fact: 
+  set_fact:
     rbac_current_pk: []
     rolebindings_pk: []
 
 - name: Add PKs current
-  set_fact: 
+  set_fact:
     rbac_current_pk: '{{ rbac_current_pk +  [ item| combine({"tmppk": item.principal+item.role})] }}'
   loop: "{{ rbac_current }}"
   when: item.clusterName == cluster_name and test|length == 0
@@ -23,31 +23,32 @@
 
 - name: Add PKs desired
   # skip the rule name
-  set_fact: 
-    rolebindings_pk: '{{ rolebindings_pk +  [ { "tmppk": item.principal+item.role, "principal": item.principal, "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
+  set_fact:
+    rolebindings_pk: '{{ rolebindings_pk +  [ { "tmppk": item.principal+item.role, "principal": item.principal,
+                      "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
   loop: "{{ rolebindings }}"
   when: item.clusterName == cluster_name and test|length == 0
   vars:
-     myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
-     test: "{{ item.principal|regex_search(rbac_protected_accounts)}}"
+    myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
+    test: "{{ item.principal|regex_search(rbac_protected_accounts)}}"
 
 - name: To Add
 # # check rolebindings to add, cleanup the pk
-  set_fact: 
+  set_fact:
     rbac_to_add: '{{rbac_to_add|d([]) + [{ "principal": item.principal, "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
   loop: "{{ rolebindings_pk }}"
-  when: 
-    - item.tmppk in roles_to_add_name 
+  when:
+    - item.tmppk in roles_to_add_name
   vars:
     roles_to_add_name: "{{rolebindings_pk | map(attribute='tmppk') | difference(rbac_current_pk | map(attribute='tmppk') )}}"
     myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
 
 - name: To Remove
 # # check rolebindings to remove, cleanup the pk
-  set_fact: 
+  set_fact:
     rbac_to_delete: '{{rbac_to_delete + [{ "principal": item.principal, "role": item.role, "clusterName" : item.clusterName} | combine(myitem)] }}'
   loop: "{{rbac_current_pk }}"
-  when: 
+  when:
     - item.tmppk in roles_to_delete_name
   vars:
     roles_to_delete_name: "{{rbac_current_pk | map(attribute='tmppk') | difference(rolebindings_pk | map(attribute='tmppk') )}}"
@@ -56,15 +57,16 @@
 
 - name: Initialize Diffs
   block:
-    - set_fact: 
-       rbac_to_reconfigure: "{{rolebindings_pk | difference(rbac_current_pk) }}"
-       resources_to_add: []
-       resources_to_delete: []
+    - set_fact:
+        rbac_to_reconfigure: "{{rolebindings_pk | difference(rbac_current_pk) }}"
+        resources_to_add: []
+        resources_to_delete: []
     - debug:
-       msg="To reconfigure>{{ rbac_to_reconfigure }}"    
+        msg: "To reconfigure>{{ rbac_to_reconfigure }}"
+        verbosity: 3
 
 - name: To reconfigure resources
-    # check the configs for changes 
+    # check the configs for changes
   include_tasks: tasks/rbac_helper.yml
   # debug:
   #   msg:
@@ -73,17 +75,17 @@
   #     - "{{item_rbac.1.1.resources|d([])|count > 0}}"
   #     - "{{item_rbac.1.0.resources | symmetric_difference(item_rbac.1.1.resources|d([]))}}"
   #     - "{{item_rbac.1.0.tmppk not in rbac_to_delete}}"
-  loop: "{{ (rbac_to_reconfigure + rbac_current_pk) | groupby('tmppk')}}"    
+  loop: "{{ (rbac_to_reconfigure + rbac_current_pk) | groupby('tmppk')}}"
   loop_control:
     loop_var: item_rbac
   when: (item_rbac.1.1.resources|d([])|count > 0) and _test and (item_rbac.1.0.tmppk not in rbac_to_delete)
   vars:
     _test: "{{ item_rbac.1.0.resources|d([]) | symmetric_difference(item_rbac.1.1.resources|d([])) | length > 0}}"
     rbac_in: "{{ item_rbac.1.0 }}"
-    rbac_state: "{{ item_rbac.1.1 }}"   
+    rbac_state: "{{ item_rbac.1.1 }}"
 
 - debug:
-    var: rbac_to_add 
+    var: rbac_to_add
     verbosity: 2
 - debug:
     var: rbac_to_delete
@@ -96,8 +98,7 @@
     verbosity: 2
 
 - name: Merge Lists
-# merge the add and delete lists       
+# merge the add and delete lists
   set_fact:
     rbac_to_add: "{{rbac_to_add+resources_to_add}}"
     rbac_to_delete: "{{rbac_to_delete+resources_to_delete}}"
-

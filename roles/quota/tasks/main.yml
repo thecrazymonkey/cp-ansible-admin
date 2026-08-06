@@ -1,7 +1,7 @@
 ---
-- name: Dump Quotas 
+- name: Dump Quotas
   include_tasks: quota_dump.yml
-  loop: 
+  loop:
     - clients
     - users
   loop_control:
@@ -9,14 +9,14 @@
   vars:
     entity: "{{ item_entity }}"
 
-- name: Save Quotas 
+- name: Save Quotas
   include_tasks: quota_save.yml
   when:
     - quotas_current|length > 0
 
 - name: Delta Quotas
   include_tasks: quota_delta.yml
-  loop: 
+  loop:
     - clients
     - users
   loop_control:
@@ -26,24 +26,24 @@
 
 - name: Add Quotas
   include_tasks: quota_add.yml
-  loop: 
+  loop:
     - clients
     - users
   loop_control:
     loop_var: item_entity
   vars:
     entity: "{{ item_entity }}"
-  when: 
+  when:
     - quotas_to_add[entity]|length > 0
     - not ansible_check_mode
 
 - name: Delete Quotas
   include_tasks: quota_delete.yml
-  when: 
+  when:
     - quotas_to_delete[entity]|length > 0
     - not ansible_check_mode
     - quotas_delete_enabled|bool
-  loop: 
+  loop:
     - clients
     - users
   loop_control:

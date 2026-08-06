@@ -1,0 +1,39 @@
+---
+- name: Authorization Header
+  vars:
+    _user: "{{ rest_user if not oauth_enabled else oauth_client_id }}"
+    _user_password: "{{ rest_user_password if not oauth_enabled else oauth_client_secret }}"
+  ansible.builtin.include_tasks: roles/common/tasks/_authorization_header.yml
+- debug:
+    var: connectors_to_add
+    verbosity: 2
+- name: Dump Connectors
+  include_tasks: connectors_dump.yml
+
+- name: Save Connectors to a file
+  include_tasks: connectors_save.yml
+  when: connectors_current|length > 0
+
+- name: Delta Connectors
+  include_tasks: connectors_delta.yml
+
+- name: Create/Update Connectors
+  include_tasks: connectors_crud.yml
+  vars:
+    connectors_op_list: "{{ connectors_to_add }}"
+    http_method: PUT
+    http_status_code: [200, 201]
+  when:
+    - connectors_to_add|length > 0
+    - not ansible_check_mode
+
+- name: Delete Connectors
+  include_tasks: connectors_crud.yml
+  vars:
+    connectors_op_list: "{{ connectors_to_delete }}"
+    http_method: DELETE
+    http_status_code: 204
+  when:
+    - connectors_to_delete|length > 0
+    - not ansible_check_mode
+    - connectors_delete_enabled|bool

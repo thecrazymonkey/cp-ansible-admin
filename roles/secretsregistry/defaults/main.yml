@@ -1,0 +1,63 @@
+---
+# connectivity variables (following topic role pattern)
+# Connect REST API base URL (default port 8083)
+# https by default - this API carries secret values in request/response bodies
+rest_server_url: https://connect.example.com:8083
+rest_user: admin
+rest_user_password: admin
+
+# OAuth Configuration
+oauth_enabled: false
+oauth_client_id: ""
+oauth_client_secret: ""
+
+# TLS Configuration
+client_tls_cert: ""
+client_tls_key: ""
+ca_tls_path: ""
+
+# secrets structure to hold desired state
+# Each secret has a path, key, and secret value
+secrets: []
+
+# defaults
+# secrets delete is disabled by default (following topic pattern)
+secret_delete_enabled: false
+secret_update_enabled: true
+
+# list regex representing all secrets you want to be left alone
+secret_protected: ""
+# whitelisted paths - regex pattern for secret paths
+secret_whitelist: ".*"
+
+# for dumping the current state
+secret_dump_file: false
+secret_dump_destination: ./secret_dump_out.yml
+
+# backup settings
+secret_backup_enabled: false
+secret_backup_destination: ./secret_backup_out.yml
+
+# Connect Secret Registry specific settings
+# Kafka topic where secrets are stored (default: _confluent-secrets)
+secret_topic: "_confluent-secrets"
+# Secret Registry group ID (default: secret-registry)
+secret_group_id: "secret-registry"
+# Connect cluster ID for RBAC
+connect_cluster_id: ""
+# Kafka cluster ID for RBAC
+kafka_cluster_id: ""
+
+# API settings
+# request timeout is the shared api_timeout from the common role
+# Default secret version to retrieve (latest, or specific version number)
+secret_default_version: "latest"
+
+# debugging
+secret_debug_mode: false
+
+# global variables (following topic role pattern)
+secrets_current: []
+secrets_to_add: []
+secrets_to_update: []
+secrets_to_delete: []

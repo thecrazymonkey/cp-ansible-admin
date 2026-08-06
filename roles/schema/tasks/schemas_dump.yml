@@ -3,30 +3,34 @@
   uri:
     url: "{{sr_server_url}}/subjects"
     method: GET
-    validate_certs: false
+    timeout: "{{ api_timeout }}"
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
     force_basic_auth: true
-    return_content: yes  
-    url_username: "{{sr_user}}"
-    url_password: "{{sr_user_password}}"
-   #client_cert: "{{ssl_file_path}}/{{host_cert_name}}"
-   #client_key: "{{ssl_file_path}}/{{host_key_name}}"
+    return_content: true
+    headers:
+      Authorization: "{{ authorization_header }}"
+   # client_cert: "{{ssl_file_path}}/{{host_cert_name}}"
+   # client_key: "{{ssl_file_path}}/{{host_key_name}}"
     body_format: json
   register: subject_list
-  check_mode: no
-  delegate_to: "{{ target_host }}" 
+  check_mode: false
+  delegate_to: "{{ target_host }}"
 
 - name: Get Subject List
-  set_fact: 
+  set_fact:
     sub_list: '{{ subject_list.json }}'
 
 - name: Get Versions and version schemas
   include_tasks: tasks/schemas_dump_helper.yml
-  loop: "{{ sub_list  }}"    
+  loop: "{{ sub_list  }}"
   loop_control:
     loop_var: item_subject
   when: sub_list|length > 0
 
 - name: Set Schemas Current
-  set_fact: 
+  set_fact:
     schemas_current: '{{ subject_versions_t4 }}'
   when: sub_list|length > 0

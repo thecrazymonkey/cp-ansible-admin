@@ -1,0 +1,38 @@
+---
+- name: "Get current compatibility for {{ _subject_name }}"
+  ansible.builtin.uri:
+    url: "{{ curl_config_api_url | trim }}/{{ _subject_name }}"
+    method: GET
+    timeout: "{{ api_timeout }}"
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    headers:
+      Authorization: "{{ authorization_header }}"
+    return_content: true
+    status_code: [200, 404]
+  register: _current_compat
+  check_mode: false
+
+- name: "Update compatibility for {{ _subject_name }}"
+  ansible.builtin.uri:
+    url: "{{ curl_config_api_url | trim }}/{{ _subject_name }}"
+    method: PUT
+    timeout: "{{ api_timeout }}"
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    headers:
+      Authorization: "{{ authorization_header }}"
+      Content-Type: application/vnd.schemaregistry.v1+json
+    body_format: json
+    body:
+      compatibility: "{{ _compatibility }}"
+    status_code: 200
+    return_content: true
+  register: result
+  changed_when: result.status == 200
+  when:
+    - _current_compat.status | d(0) == 404 or _current_compat.json.compatibilityLevel | d('') != _compatibility

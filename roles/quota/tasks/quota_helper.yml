@@ -3,7 +3,7 @@
 # check the clients to add also process default settings here
   vars:
     clients_desired: "{{ quota_desired.clients if quota_desired.clients is defined and entity=='users' else [] }}"
-    clients_state: "{{ quota_state.clients if quota_state.clients is defined and entity=='users' else [] }}"    
+    clients_state: "{{ quota_state.clients if quota_state.clients is defined and entity=='users' else [] }}"
     quota_desired_entity: "{{ quota_desired[entity] if quota_desired != {} else {}}}"
     quota_state_entity: "{{ quota_state[entity] if quota_state != {} else {} }}"
   block:
@@ -18,10 +18,10 @@
           - "Add list     >{{to_add_list}}"
           - "Delete list  >{{to_delete_list}}"
         verbosity: 2
-    
+
     - name: To Add Clients/Users
       # if any condition is met just add everything for the specific user
-      set_fact: 
+      set_fact:
         quotas_to_add_entity: "{{quotas_to_add_entity + [{entity: quota_desired_entity}|combine(dict(_skeys|zip(_svals)))]}}"
       vars:
         _skeys: "{{ quota_desired.keys()|d([])|list|difference(['clients'])}}"
@@ -30,14 +30,17 @@
         _diff_keys: "{{ _skeys|difference(_tkeys) }}"
         _svals: "{{ _skeys|map('extract',quota_desired)|d([])|list }}"
         _tvals: "{{ _tkeys|map('extract', quota_state)| d([])|list }}"
-        _diff_vals: "{{ _svals|difference(_tvals) }}"    
-      # if state if empty for the main item or         
-      when: (quota_state|length == 0  or _diff_keys|length != 0 or _diff_vals|length !=0) and quota_desired_entity not in to_delete_list 
+        _diff_vals: "{{ _svals|difference(_tvals) }}"
+      # if state if empty for the main item or
+      when: (quota_state|length == 0  or _diff_keys|length != 0 or _diff_vals|length !=0) and quota_desired_entity not in to_delete_list
 
     - name: To Add Users/Clients Quotas
-      set_fact: 
-        quotas_to_add_entity: "{{quotas_to_add_entity + [{entity: quota_state_entity, 'clients': [dict(_skeys|zip(_svals))]}]}}"
-      # if state if empty for the main item or              
+      set_fact:
+        # the entity name must come from the desired state: for a user that does not exist
+        # yet quota_state_entity is {}, which lands in the CLI as --entity-name {} and makes
+        # every new user collide on the same bogus principal
+        quotas_to_add_entity: "{{quotas_to_add_entity + [{entity: quota_desired_entity, 'clients': [dict(_skeys|zip(_svals))]}]}}"
+      # if state if empty for the main item or
       loop: "{{(clients_desired+clients_state)|groupby('clients')}}"
       when: clients_desired|length>0 and (_diff_keys|length>0 or _diff_vals|length>0)
       vars:
@@ -48,11 +51,11 @@
         _diff_keys: "{{ _skeys|difference(_tkeys) }}"
         _svals: "{{ _skeys|map('extract',item.1.0)|d([])|list }}"
         _tvals: "{{ _tkeys|map('extract', item.1.1)| d([])|list }}"
-        _diff_vals: "{{ _svals|difference(_tvals) }}"    
+        _diff_vals: "{{ _svals|difference(_tvals) }}"
 
     - name: To Delete Clients/Users
       # full user to be deleted
-      set_fact: 
+      set_fact:
         quotas_to_delete_entity: "{{ quotas_to_delete_entity+[{entity: quota_state_entity, 'delete': _diff_keys|difference([entity])}]}}"
       when: quota_state_entity in to_delete_list or _diff_keys|length != 0
       vars:
@@ -64,7 +67,8 @@
     - name: To Delete Users/Client quotas
         # check the quotas for attribure removals
       set_fact:
-        quotas_to_delete_entity: "{{ quotas_to_delete_entity|d([])+[{'clients': item.0, entity: quota_state.users, 'delete': _diff_keys|list|difference(['clients'])}]}}"
+        quotas_to_delete_entity: "{{ quotas_to_delete_entity|d([])+[{'clients': item.0, entity: quota_state.users,
+                                 'delete': _diff_keys|list|difference(['clients'])}]}}"
       loop: "{{ (clients_state + clients_desired) | groupby('clients') }}"
       vars:
         _source: "{{item.1|first if item.1|first in clients_state else {} }}"
@@ -72,9 +76,9 @@
         _skeys: "{{ _source.keys()|d([]) }}"
         _tkeys: "{{ _target.keys()| d([]) }}"
         _diff_keys: "{{ _skeys|difference(_tkeys) }}"
-      when: _diff_keys|length != 0 
+      when: _diff_keys|length != 0
 
     - debug:
         msg:
           - "To add client list   >>>{{quotas_to_add_entity}}"
-          - "To delete entity     >>>{{quotas_to_delete_entity}}"        
+          - "To delete entity     >>>{{quotas_to_delete_entity}}"

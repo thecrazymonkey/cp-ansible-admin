@@ -1,0 +1,25 @@
+---
+- ansible.builtin.debug:
+    msg: "connector_in>{{ connector_in }}"
+    verbosity: 3
+- ansible.builtin.debug:
+    msg: "connector_state>{{ connector_state }}"
+    verbosity: 3
+
+- name: Get Delta
+  ansible.builtin.set_fact:
+    result: "{{ ['yes'] if connector_state.keys() | difference(connector_in.keys()) | length > 0
+            else connector_state.values()|
+              zip(connector_state.keys()|map('extract', connector_in))|
+              map('zip', ['connector_state', 'connector_in'])|
+              map('map', 'reverse')|
+              map('community.general.dict')|
+              json_query('[?connector_state!=connector_in]') }}"
+
+- ansible.builtin.debug:
+    msg: "result>{{ result }}"
+    verbosity: 2
+
+- ansible.builtin.set_fact:
+    connectors_to_add: "{{ connectors_to_add + [connector_in] }}"
+  when: result|length > 0

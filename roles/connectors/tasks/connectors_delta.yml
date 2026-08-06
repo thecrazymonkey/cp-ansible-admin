@@ -1,0 +1,42 @@
+---
+# make out delta operation from the existing and intended connectors setup
+# input connectors_dump - current state; connectors - desired state
+- debug:
+    msg:
+      - "Current state>{{ connectors_current }}"
+      - "Desired state>{{ connectors }}"
+    verbosity: 3
+
+- name: To add
+# check the connectors to add, figure out the config updates later
+  set_fact:
+    connectors_to_add: "{{connectors_to_add + [item] }}"
+  loop: "{{ connectors }}"
+  when:
+    - connectors | d([]) | length > 0
+    - item.name in connectors_to_add_name
+  vars:
+    connectors_to_add_name: "{{connectors | map(attribute='name') | difference(connectors_current | map(attribute='name') )}}"
+
+- name: To remove
+# only check against the connectors names, TODO might need to add check against "protected" connectors list
+  set_fact:
+    connectors_to_delete: "{{connectors_current | map(attribute='name') | difference(connectors | map(attribute='name')) | list }}"
+
+- name: To reconfigure configs
+    # check the configs for changes
+  include_tasks: tasks/configs_helper.yml
+  loop: "{{ (connectors + connectors_current) | groupby('name')}}"
+  loop_control:
+    loop_var: item_connector
+  when: (item_connector.0 not in connectors_to_delete)
+  vars:
+    connector_in: "{{ item_connector.1.0 }}"
+    connector_state: "{{ item_connector.1.1 | d({}) }}"
+
+- debug:
+    var: connectors_to_add
+    verbosity: 2
+- debug:
+    var: connectors_to_delete
+    verbosity: 2

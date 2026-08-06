@@ -1,0 +1,335 @@
+---
+# Example Zookeeper ACLs configuration for Kafka ACL Management
+# This file demonstrates how to structure ACLs for the Zookeeper ACL Management role
+#
+# Structure:
+# - principal: User or service account (User:username, User:CN=...)
+# - patterns: List of ACL patterns with resource types and permissions
+#   - resource_type: TOPIC, GROUP, CLUSTER, TRANSACTIONAL_ID, DELEGATION_TOKEN
+#   - resource_name: Name or pattern for the resource
+#   - pattern_type: LITERAL (exact match) or PREFIXED (prefix match)
+#   - entries: List of permission entries with host, operation, and permission
+#
+# The Zookeeper ACL Management role uses the Confluent Server REST API
+# and manages traditional Kafka ACLs stored in Zookeeper
+#
+# Safety Features:
+# - Uses direct Kafka cluster ID (not cluster registry)
+# - State dumping and backup capabilities
+
+zacls:
+  # Application user with topic and group access
+  - principal: User:app-user-1
+    patterns:
+      # Read access to specific topics
+      - resource_type: TOPIC
+        resource_name: user-events
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Consumer group access
+      - resource_type: GROUP
+        resource_name: app-consumer-group
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+  # Producer application with write access
+  - principal: User:producer-app
+    patterns:
+      # Write access to multiple topics with prefix
+      - resource_type: TOPIC
+        resource_name: events
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+          - host: '*'
+            operation: CREATE
+            permission: ALLOW
+
+  # Analytics service with broader read access
+  - principal: User:analytics-service
+    patterns:
+      # Read access to analytics topics
+      - resource_type: TOPIC
+        resource_name: analytics
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Multiple consumer groups for different analytics workloads
+      - resource_type: GROUP
+        resource_name: analytics-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+  # ETL service with comprehensive access
+  - principal: User:etl-service
+    patterns:
+      # Read from source topics
+      - resource_type: TOPIC
+        resource_name: raw-data
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Write to processed topics
+      - resource_type: TOPIC
+        resource_name: processed-data
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+          - host: '*'
+            operation: CREATE
+            permission: ALLOW
+
+      # ETL consumer groups
+      - resource_type: GROUP
+        resource_name: etl-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+      # Transactional ID for exactly-once processing
+      - resource_type: TRANSACTIONAL_ID
+        resource_name: etl-transaction
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+  # Monitoring service with read-only access
+  - principal: User:monitoring
+    patterns:
+      # Read access to all topics for monitoring
+      - resource_type: TOPIC
+        resource_name: '*'
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Monitoring consumer group
+      - resource_type: GROUP
+        resource_name: monitoring-group
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+      # Cluster metadata access for monitoring
+      - resource_type: CLUSTER
+        resource_name: kafka-cluster
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+  # Development user with limited access
+  - principal: User:dev-user
+    patterns:
+      # Access to development topics only
+      - resource_type: TOPIC
+        resource_name: dev-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+          - host: '*'
+            operation: CREATE
+            permission: ALLOW
+
+      # Development consumer groups
+      - resource_type: GROUP
+        resource_name: dev-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+  # Service account with certificate-based authentication
+  - principal: User:CN=kafka-client,OU=Services,O=MyCompany,C=US
+    patterns:
+      # Specific topic access for the service
+      - resource_type: TOPIC
+        resource_name: service-data
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: WRITE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Service consumer group
+      - resource_type: GROUP
+        resource_name: service-consumer
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+
+  # Admin user with cluster-level access
+  - principal: User:kafka-admin
+    patterns:
+      # Full cluster access for administrative operations
+      - resource_type: CLUSTER
+        resource_name: kafka-cluster
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: CREATE
+            permission: ALLOW
+          - host: '*'
+            operation: DELETE
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+          - host: '*'
+            operation: ALTER
+            permission: ALLOW
+          - host: '*'
+            operation: CLUSTER_ACTION
+            permission: ALLOW
+
+      # Full topic access
+      - resource_type: TOPIC
+        resource_name: '*'
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: ALL
+            permission: ALLOW
+
+  # Restricted user with explicit denies
+  - principal: User:restricted-user
+    patterns:
+      # Allow access to specific topic
+      - resource_type: TOPIC
+        resource_name: public-data
+        pattern_type: LITERAL
+        entries:
+          - host: '*'
+            operation: READ
+            permission: ALLOW
+          - host: '*'
+            operation: DESCRIBE
+            permission: ALLOW
+
+      # Explicitly deny access to sensitive topics
+      - resource_type: TOPIC
+        resource_name: sensitive-
+        pattern_type: PREFIXED
+        entries:
+          - host: '*'
+            operation: ALL
+            permission: DENY
+
+# Additional configuration variables (set in inventory or playbook):
+#
+# rest_server_url: https://kafka:8090        # Kafka REST API URL
+# rest_user: admin                           # Authentication username
+# rest_user_password: admin                 # Authentication password
+# cluster_id: kafka-cluster-id              # Kafka cluster ID (not from registry)
+# zacl_dump_file: false                     # Enable state dump
+# zacl_dump_destination: /tmp/zacl_dump.yml
+#
+# Example usage:
+# ansible-playbook -i inventory.yml zacl_management.yml -e @examples/zacl_example.yml
+#
+# Preview changes:
+# ansible-playbook -i inventory.yml zacl_management.yml -e @examples/zacl_example.yml --check -vv
+#
+# Resource types:
+# - TOPIC: Kafka topics
+# - GROUP: Consumer groups
+# - CLUSTER: Kafka cluster
+# - TRANSACTIONAL_ID: Transactional IDs for exactly-once semantics
+# - DELEGATION_TOKEN: Delegation tokens for authentication
+#
+# Pattern types:
+# - LITERAL: Exact resource name match
+# - PREFIXED: Resource name prefix match
+#
+# Operations:
+# - READ: Read data from topics or describe resources
+# - WRITE: Write data to topics
+# - CREATE: Create topics or other resources
+# - DELETE: Delete topics or other resources
+# - ALTER: Modify topic configurations
+# - DESCRIBE: Get metadata about resources
+# - CLUSTER_ACTION: Cluster-level operations
+# - DESCRIBE_CONFIGS: Describe configurations
+# - ALTER_CONFIGS: Alter configurations
+# - IDEMPOTENT_WRITE: Idempotent producer operations
+# - ALL: All operations (use with caution)
+#
+# Permissions:
+# - ALLOW: Grant the operation
+# - DENY: Explicitly deny the operation (takes precedence over ALLOW)
+#
+# Best practices:
+# - Use principle of least privilege
+# - Prefer PREFIXED patterns for scalability
+# - Use specific host restrictions when possible (not '*')
+# - Group related ACLs by principal for maintainability
+# - Test ACL changes in development environments first
+# - Monitor ACL violations in logs and metrics
+# - Use DENY permissions sparingly and document them well

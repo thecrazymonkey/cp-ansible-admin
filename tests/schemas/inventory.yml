@@ -1,0 +1,29 @@
+---
+all:
+  vars:
+    # OAuth configuration
+    oauth_enabled: true
+    oauth_token_uri: "{{ lookup('env', 'OAUTH_TOKEN_URI') }}"
+    oauth_client_id: "{{ lookup('env', 'OAUTH_CLIENT_ID') }}"
+    oauth_client_secret: "{{ lookup('env', 'OAUTH_CLIENT_SECRET') }}"
+
+    # Required by schemas_override.yml (sets sr_user/sr_user_password unconditionally)
+    # Actual auth is handled by OAuth bearer token
+    schema_registry_ldap_user: "unused"
+    schema_registry_ldap_password: "unused"
+
+    # TLS settings — adjust for your environment
+    tls_enabled: false
+    mtls: false
+
+    # Disable dump/restore for tests
+    schema_dump_file: false
+    dump_only: false
+    restore_only: false
+
+  children:
+    schema_registry:
+      hosts:
+        # Replace with your Schema Registry host (without port)
+        # Port is controlled by sr_internal_port (default: 8081)
+        localhost:

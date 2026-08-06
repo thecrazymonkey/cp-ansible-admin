@@ -7,8 +7,8 @@
     rbac_mapped: []
 
 - debug:
-    msg="{{scope}}"
-    verbosity=3
+    msg: "{{scope}}"
+    verbosity: 3
 
 - name: Get Roles List
 # read roles and cache them
@@ -16,73 +16,86 @@
     - uri:
         url: "{{mds_server_url}}/security/1.0/roleNames"
         method: GET
-        validate_certs: false
+        timeout: "{{ api_timeout }}"
+        validate_certs: true
+        client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+        client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+        ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
         force_basic_auth: true
-        force: yes
-        url_username: "{{mds_user}}"
-        url_password: "{{mds_user_password}}"
+        force: true
+        headers:
+          Authorization: "{{ authorization_header }}"
         body_format: json
       register: roles_list
-      check_mode: no
+      check_mode: false
     - debug:
-        msg="{{roles_list.json}}"
-        verbosity=3
+        msg: "{{roles_list.json}}"
+        verbosity: 3
     - set_fact:
         roles_cached: "{{roles_list.json}}"
-  when: roles_cached|length==0 
+  when: roles_cached|length==0
 
 - name: Get Principals For Roles List
   uri:
     url: "{{mds_server_url}}/security/1.0/lookup/role/{{ item }}"
     method: POST
-    validate_certs: false
+    timeout: "{{ api_timeout }}"
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
     force_basic_auth: true
-    force: yes
-    url_username: "{{mds_user}}"
-    url_password: "{{mds_user_password}}"
+    force: true
+    headers:
+      Authorization: "{{ authorization_header }}"
     body_format: json
     body: "{{scope}}"
   register: principals_list_tmp
-  check_mode: no
+  check_mode: false
   loop: "{{ roles_cached }}"
 
    # filter out static and default
 - name: Get List Of Principals
-  set_fact: 
+  set_fact:
     principals_list: '{{ principals_list +  [{ "role": item.0.item, "principal": item.1 }] }}'
   loop: "{{ principals_list_tmp.results | d([]) | subelements('json') }}"
 - debug:
-    msg="{{principals_list}}"
-    verbosity=3
-  
+    msg: "{{principals_list}}"
+    verbosity: 3
+
 
 - name: Get Resources For Principal And Role
   uri:
     url: "{{mds_server_url}}/security/1.0/principals/{{item.principal}}/roles/{{item.role}}/resources"
     method: POST
-    validate_certs: false
+    timeout: "{{ api_timeout }}"
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
     force_basic_auth: true
-    force: yes
-    url_username: "{{mds_user}}"
-    url_password: "{{mds_user_password}}"
+    force: true
+    headers:
+      Authorization: "{{ authorization_header }}"
     body_format: json
     body: "{{scope}}"
   register: resources_list_tmp
   loop: "{{ principals_list }}"
-  check_mode: no
+  check_mode: false
 
 - name: Get List Of Principals, Roles and Resources
-  set_fact: 
-    rbac_list: '{{ rbac_list +  [ { "tmppk": item.0.item.principal+item.0.item.role, "principal": item.0.item.principal, "role": item.0.item.role, "clusterName" : cluster_name, "resources" : [item.1] }] }}'
+  set_fact:
+    rbac_list: '{{ rbac_list +  [ { "tmppk": item.0.item.principal+item.0.item.role, "principal": item.0.item.principal,
+               "role": item.0.item.role, "clusterName" : cluster_name, "resources" : [item.1] }] }}'
   loop: "{{ resources_list_tmp.results | subelements('json') }}"
 
-# combine all - 2.10+ 
+# combine all - 2.10+
 # - name: Combine Resources Into Single List
 #   set_fact:
 #     rbac_current: "{{ rbac_current + [item.1|combine(list_merge='append')] }}"
 #   loop: "{{ rbac_list|groupby('tmppk') }}"
 
-- name: Combine Resources Into Single List 
+- name: Combine Resources Into Single List
 # to support 2.9
   set_fact:
     rbac_current: "{{ rbac_current|d([]) + [item.1|combine({'resources':_resources})] }}"
@@ -91,11 +104,11 @@
     _resources: "{{ item.1|map(attribute='resources')|flatten }}"
 
 - name: Add Admins
-  set_fact: 
+  set_fact:
     rbac_current: '{{ rbac_current +  [ { "principal": item.principal, "role": item.role, "clusterName" : cluster_name }] }}'
   loop: "{{ principals_list }}"
   when: item.role | regex_search("^\w+Admin$|^Operator$") != none
 
 - debug:
-   var: rbac_current
-   verbosity: 3
+    var: rbac_current
+    verbosity: 3

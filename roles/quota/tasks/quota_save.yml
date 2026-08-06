@@ -1,13 +1,15 @@
 ---
-- name: Write to a file  
+- name: Write to a file
   block:
     - name: Dump To A File
       delegate_to: 'localhost'
-      copy: content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{quotas_dump_destination}}" mode=644
-      check_mode: no
+      copy:
+        content: "{{to_dump | to_nice_yaml(indent=2)}}"
+        dest: "{{quotas_dump_destination}}"
+        mode: '0600'
+      check_mode: false
       vars:
-        to_dump: "{{ {'quotas': quotas_current} }}"    
-      no_log: False
-  when: 
-    - quotas_dump_file
-
+        to_dump: "{{ {'quotas': quotas_current} }}"
+      no_log: false
+  when:
+    - quotas_dump_file|bool

@@ -1,31 +1,37 @@
 ---
+- name: Authorization Header
+  vars:
+    _user: "{{ rest_user if not oauth_enabled else oauth_client_id }}"
+    _user_password: "{{ rest_user_password if not oauth_enabled else oauth_client_secret }}"
+  ansible.builtin.include_tasks: roles/common/tasks/_authorization_header.yml
+
 - name: Determine the cluster_id
   include_tasks: roles/common/tasks/_cluster_id.yml
   when: cluster_id |d('',true)|length == 0
-  
-- name: Dump topics 
+
+- name: Dump topics
   include_tasks: topics_dump.yml
 
 - name: Save Topics
   include_tasks: topics_save.yml
   when: topics_current|length > 0
 
-- name: Delta topics 
+- name: Delta topics
   include_tasks: topics_delta.yml
 
-- name: Create topics 
+- name: Create topics
   include_tasks: topics_create.yml
   vars:
     topics_in: "{{ topics_to_add }}"
-  when: 
+  when:
     - topics_to_add|length > 0
     - not ansible_check_mode
 
-- name: Delete topics 
+- name: Delete topics
   include_tasks: topics_delete.yml
   vars:
     topics_in: "{{ topics_to_delete }}"
-  when: 
+  when:
     - topics_to_delete|length > 0
     - topic_delete_enabled|bool
     - not ansible_check_mode
@@ -34,16 +40,15 @@
   include_tasks: topics_partitions_update.yml
   vars:
     topics_in: "{{ topics_to_reconfigure_part }}"
-  when: 
+  when:
     - topics_to_reconfigure_part|length > 0
     - topic_partitions_enabled|bool
     - not ansible_check_mode
 
-- name: Update topics 
+- name: Update topics
   include_tasks: topics_update.yml
   vars:
     topics_in: "{{ topics_to_reconfigure_configs }}"
-  when: 
+  when:
     - topics_to_reconfigure_configs|length > 0
     - not ansible_check_mode
-

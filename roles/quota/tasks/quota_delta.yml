@@ -7,27 +7,28 @@
       - "Current state>{{ quotas_current[entity]|d([]) }}"
 #    verbosity: 3
 - debug:
-    msg: 
-      - "Desired state>{{ quotas[entity]|d([]) }}"   
+    msg:
+      - "Desired state>{{ quotas[entity]|d([]) }}"
 #    verbosity: 3
 
-- name: Initialize Variables         
+- name: Initialize Variables
   set_fact:
     quotas_to_add_entity: []
     quotas_to_delete_entity: []
     quotas_clients_to_delete: []
-    quotas_entity: "{{ quotas[entity]|d([]) }}"   
-    quotas_current_entity: "{{ quotas_current[entity]|d([]) }}"   
+    quotas_entity: "{{ quotas[entity]|d([]) }}"
+    quotas_current_entity: "{{ quotas_current[entity]|d([]) }}"
 
-- name: Process clients quotas
+- name: Process clients quotas  # noqa: jinja[invalid]
   # check the user quotas for client specific entries
   ansible.builtin.include_tasks: quota_helper.yml
-  loop: "{{ (quotas_entity + quotas_current_entity) | groupby(entity)}}"    
+  loop: "{{ (quotas_entity + quotas_current_entity) | groupby(entity)}}"
   vars:
-     quota_desired: "{{item_quota.1.0 if item_quota.1.0 in quotas_entity else {}}}"
-     quota_state: "{{item_quota.1.1 if item_quota.1.1 is defined and item_quota.1.1 in quotas_current_entity else item_quota.1.0 if item_quota.0 in to_delete_list else {}}}"
-     to_add_list: "{{quotas_entity | map(attribute=entity) | difference(quotas_current_entity | map(attribute=entity)) | list}}"
-     to_delete_list: "{{quotas_current_entity | map(attribute=entity) | difference(quotas_entity | map(attribute=entity)) | list}}"
+    quota_desired: "{{item_quota.1.0 if item_quota.1.0 in quotas_entity else {}}}"
+    quota_state: "{{item_quota.1.1 if item_quota.1.1 is defined and item_quota.1.1 in quotas_current_entity else
+                  item_quota.1.0 if item_quota.0 in to_delete_list else {}}}"
+    to_add_list: "{{quotas_entity | map(attribute=entity) | difference(quotas_current_entity | map(attribute=entity)) | list}}"
+    to_delete_list: "{{quotas_current_entity | map(attribute=entity) | difference(quotas_entity | map(attribute=entity)) | list}}"
   loop_control:
     loop_var: item_quota
 

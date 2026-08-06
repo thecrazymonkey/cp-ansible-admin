@@ -4,12 +4,12 @@ rest_server_url: https://rest.confluent.io:8090
 rest_user: user
 rest_user_password: user-secret
 
-# topics structure to hold desired state     
+# topics structure to hold desired state
 topics: []
 # defaults
 # topics delete is disabled by default
 topic_delete_enabled: false
-# partitions management TBD  
+# partitions management TBD
 topic_partitions_enabled: false
 # prefix when embedded proxy is used
 
@@ -19,7 +19,7 @@ topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
 topic_whitelist: ".*"
 # for dumping the current state
 topic_dump_file: false
-topic_dump_destination: /tmp/topic_dump_out.yml    
+topic_dump_destination: ./topic_dump_out.yml
 
 # global variables
 topics_current: []

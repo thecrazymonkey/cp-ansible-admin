@@ -1,9 +1,10 @@
 ---
-- name: Write to a file  
+- name: Write to a file
   block:
     - name: Prepare For Writing
       set_fact:
-        rbac_mapped: "{{ rbac_mapped|d([]) + [{'name': item.clusterName+'-'+counter|string, 'principal': item.principal, 'role': item.role, 'clusterName': item.clusterName }|combine(myitem)] }}"
+        rbac_mapped: "{{ rbac_mapped|d([]) + [{'name': item.clusterName+'-'+counter|string,
+                    'principal': item.principal, 'role': item.role, 'clusterName': item.clusterName }|combine(myitem)] }}"
       loop: "{{ rbac_current }}"
       loop_control:
         index_var: counter
@@ -11,11 +12,13 @@
         myitem: "{{ {'resources': item.resources} if item.resources is defined else {}}}"
     - name: Dump To A File
       delegate_to: 'localhost'
-      copy: content='{{to_dump | to_nice_yaml(indent=2)}}' dest="{{rbac_dump_destination}}" mode=644
-      check_mode: no
+      copy:
+        content: "{{to_dump | to_nice_yaml(indent=2)}}"
+        dest: "{{rbac_dump_destination}}"
+        mode: '0600'
+      check_mode: false
       vars:
-        to_dump: "{{ {'rolebindings': rbac_mapped} }}"    
-      no_log: False
-  when: 
-    - rbac_dump_file
-
+        to_dump: "{{ {'rolebindings': rbac_mapped} }}"
+      no_log: false
+  when:
+    - rbac_dump_file|bool

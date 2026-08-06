@@ -5,10 +5,10 @@
   environment: "{{proxy_env}}"
 
   tasks:
-  - name: Set Variables
-    import_role:
-      name: common
-      
-  - name: Process Topics
-    import_role: 
-      name: topic
+    - name: Set Variables
+      import_role:
+        name: common
+
+    - name: Process Topics
+      import_role:
+        name: topic

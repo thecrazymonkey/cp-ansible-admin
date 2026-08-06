@@ -1,0 +1,26 @@
+---
+- name: "Slurp schema file for {{ _subject_name }}"
+  ansible.builtin.slurp:
+    src: "{{ _schema_file_src_path }}"
+  register: _schema_file_content
+
+- name: "Register schema for {{ _subject_name }}"
+  ansible.builtin.uri:
+    url: "{{ curl_subjects_api_url | trim }}/{{ _subject_name }}/versions"
+    method: POST
+    timeout: "{{ api_timeout }}"
+    validate_certs: true
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    headers:
+      Authorization: "{{ authorization_header }}"
+      Content-Type: application/vnd.schemaregistry.v1+json
+    body_format: json
+    body:
+      schemaType: "{{ _schema_type | upper }}"
+      schema: "{{ _schema_file_content['content'] | b64decode }}"
+    status_code: 200
+    return_content: true
+  register: result
+  changed_when: result.status == 200

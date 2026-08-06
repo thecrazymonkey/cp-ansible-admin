@@ -5,7 +5,7 @@ rest_user: user
 rest_user_password: user-secret
 
 cacl_dump_file: false
-cacl_dump_destination: /tmp/cacl_dump_out.yml
+cacl_dump_destination: ./cacl_dump_out.yml
 cacls: []
 
 # global variables

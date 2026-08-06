@@ -1,4 +1,10 @@
 ---
+- name: Authorization Header
+  vars:
+    _user: "{{ rest_user if not oauth_enabled else oauth_client_id }}"
+    _user_password: "{{ rest_user_password if not oauth_enabled else oauth_client_secret }}"
+  ansible.builtin.include_tasks: roles/common/tasks/_authorization_header.yml
+
 - name: Determine the cluster_id
   include_tasks: roles/common/tasks/_cluster_id.yml
   when: cluster_id |d('',true)|length == 0
@@ -6,9 +12,9 @@
 - name: Dump Centralized ACLs
   include_tasks: cacl_dump.yml
   vars:
-      cluster_name: "{{cluster_id}}"
+    cluster_name: "{{cluster_id}}"
 
-- name: Save Centralized ACLs 
+- name: Save Centralized ACLs
   include_tasks: roles/common/tasks/acl_save.yml
   when: acl_list|length > 0
   vars:
@@ -29,18 +35,17 @@
     cacl_op_list: "{{ acl_to_add }}"
     http_method: POST
     http_status_code: 204
-  when: 
+  when:
     - acl_to_add|length > 0
     - not ansible_check_mode
 
-- name: Delete Centralized ACLs 
+- name: Delete Centralized ACLs
   include_tasks: cacl_crud.yml
   vars:
     cacl_op_list: "{{ acl_to_delete }}"
     http_method: DELETE
     http_status_code: 200
-  when: 
+  when:
     - acl_to_delete|length > 0
     - not ansible_check_mode
     - acl_delete_enabled|bool
-

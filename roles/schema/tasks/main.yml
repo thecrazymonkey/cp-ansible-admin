@@ -2,20 +2,31 @@
 - name: Schemas Override
   include_tasks: schemas_override.yml
 
+- name: Set Schema Registry Credentials
+  ansible.builtin.include_tasks: _schemas_credentials.yml
+  when: not oauth_enabled | d(false) | bool
+
+- name: Authorization Header
+  vars:
+    _user: "{{ sr_user | d(oauth_client_id) if not oauth_enabled | d(false) | bool else oauth_client_id }}"
+    _user_password: "{{ sr_user_password | d(oauth_client_secret) if not oauth_enabled | d(false) | bool else oauth_client_secret }}"
+
+  ansible.builtin.include_tasks: roles/common/tasks/_authorization_header.yml
+
 - name: Dump Current Schemas
-  include_tasks: schemas_dump.yml   
-  when: not restore_only|bool  
+  include_tasks: schemas_dump.yml
+  when: not restore_only|bool
 
 - name: Save Current Schemas
   include_tasks: schemas_save.yml
-  when: 
+  when:
     - schemas_current|length > 0
     - not restore_only|bool
 
 - name: Restore Current Schemas to a different cluster
   include_tasks: schemas_restore.yml
-  when: restore_only|bool      
+  when: restore_only|bool
 
 - name: Schemas CRUD
   include_tasks: schemas_manage.yml
-  when: not restore_only|bool and not dump_only|bool  
+  when: not restore_only|bool and not dump_only|bool

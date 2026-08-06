@@ -3,39 +3,43 @@
 - set_fact:
     scope: '{{ { "scope": { "clusters": { "kafka-cluster": cluster_name }},
             "aclBindingFilter":{"patternFilter":{"resourceType":"ANY","patternType":"ANY"},
-            "entryFilter":{"operation":"ANY","permissionType":"ANY"}} } }}' 
+            "entryFilter":{"operation":"ANY","permissionType":"ANY"}} } }}'
     cacl_list: []
 - debug:
-    msg="{{scope}}"
-    verbosity=3
+    msg: "{{scope}}"
+    verbosity: 3
 
 - name: Get All ACLs
   uri:
     url: "{{mds_server_url}}/security/1.0/acls:search"
     method: POST
-    validate_certs: false
+    timeout: "{{ api_timeout }}"
+    validate_certs: true
     force_basic_auth: true
-    force: yes
-    url_username: "{{mds_user}}"
-    url_password: "{{mds_user_password}}"
+    client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
+    client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
+    ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
+    force: true
+    headers:
+      Authorization: "{{ authorization_header }}"
     body_format: json
     body: "{{scope}}"
   register: cacl_list_tmp
-  check_mode: no
+  check_mode: false
 
 - debug:
-    msg="{{cacl_list_tmp}}"
-    verbosity=3
+    msg: "{{cacl_list_tmp}}"
+    verbosity: 3
 
 - name: Get List Of ACLs
 # "translate" to a common format with Zookeeper ACLs
-  set_fact: 
-    cacl_list: '{{ cacl_list +  [ { "principal": item.entry.principal, "operation": item.entry.operation, 
-        "permission" : item.entry.permissionType, "resource_name" : item.pattern.name, 
+  set_fact:
+    cacl_list: '{{ cacl_list +  [ { "principal": item.entry.principal, "operation": item.entry.operation,
+        "permission" : item.entry.permissionType, "resource_name" : item.pattern.name,
         "pattern_type": item.pattern.patternType, "resource_type": item.pattern.resourceType,
         "host": item.entry.host }] }}'
   loop: "{{ cacl_list_tmp.json }}"
 
 - debug:
-   var: cacl_list
-   verbosity: 3
+    var: cacl_list
+    verbosity: 3

@@ -1,0 +1,133 @@
+---
+# Example topics configuration for Kafka Topic Management
+# This file demonstrates how to structure topics for the Confluent Platform Topic Management role
+#
+# Structure:
+# - topic_name: Name of the Kafka topic
+# - partitions_count: Number of partitions (cannot be decreased)
+# - replication_factor: Replication factor for the topic
+# - configs: List of topic-level configurations
+#
+# The Topic Management role uses the Confluent Server REST API v3
+# and supports creating, updating, and deleting topics with their configurations
+#
+# Safety Features:
+# - topic_delete_enabled: Controls deletion operations (default: false)
+# - topic_protected: Regex pattern for protected topics
+# - topic_partitions_enabled: Controls partition count changes (default: false)
+
+topics:
+  # Basic topic with minimal configuration
+  - topic_name: user-events
+    partitions_count: 12
+    replication_factor: 3
+    configs:
+      - name: min.insync.replicas
+        value: "2"
+
+  # High-throughput topic with custom retention
+  - topic_name: clickstream
+    partitions_count: 24
+    replication_factor: 3
+    configs:
+      - name: min.insync.replicas
+        value: "2"
+      - name: retention.ms
+        value: "604800000"  # 7 days
+      - name: segment.ms
+        value: "86400000"   # 1 day
+      - name: compression.type
+        value: "lz4"
+
+  # Transactional topic for financial data
+  - topic_name: financial-transactions
+    partitions_count: 6
+    replication_factor: 3
+    configs:
+      - name: min.insync.replicas
+        value: "3"  # Higher durability
+      - name: unclean.leader.election.enable
+        value: "false"
+      - name: retention.ms
+        value: "31536000000"  # 1 year
+      - name: cleanup.policy
+        value: "compact"
+
+  # Log topic with log compaction
+  - topic_name: application-logs
+    partitions_count: 8
+    replication_factor: 3
+    configs:
+      - name: cleanup.policy
+        value: "compact"
+      - name: min.compaction.lag.ms
+        value: "300000"  # 5 minutes
+      - name: segment.ms
+        value: "43200000"  # 12 hours
+      - name: min.insync.replicas
+        value: "2"
+
+  # Schema Registry topic (if managing manually)
+  - topic_name: product-schemas
+    partitions_count: 1
+    replication_factor: 3
+    configs:
+      - name: cleanup.policy
+        value: "compact"
+      - name: min.insync.replicas
+        value: "2"
+
+  # Dead letter queue topic
+  - topic_name: dlq-errors
+    partitions_count: 3
+    replication_factor: 3
+    configs:
+      - name: min.insync.replicas
+        value: "2"
+      - name: retention.ms
+        value: "2592000000"  # 30 days
+
+  # Connect offset topic (if managing manually)
+  - topic_name: my-connect-offsets
+    partitions_count: 25
+    replication_factor: 3
+    configs:
+      - name: cleanup.policy
+        value: "compact"
+      - name: segment.ms
+        value: "86400000"
+      - name: min.insync.replicas
+        value: "2"
+
+  # Test topic for development
+  - topic_name: test-topic
+    partitions_count: 1
+    replication_factor: 1
+    configs:
+      - name: retention.ms
+        value: "3600000"  # 1 hour for testing
+
+# Additional configuration variables (set in inventory or playbook):
+#
+# topic_delete_enabled: false          # Enable/disable topic deletion
+# topic_partitions_enabled: false      # Enable/disable partition changes
+# topic_protected: "^_confluent.*"     # Regex for protected topics
+# topic_whitelist: ".*"                # Regex for allowed topics
+# topic_dump_file: false               # Enable state dump
+# topic_dump_destination: /tmp/topics_dump.yml
+#
+# Example usage:
+# ansible-playbook -i inventory.yml topics_management.yml -e @examples/topics_example.yml
+#
+# Preview changes:
+# ansible-playbook -i inventory.yml topics_management.yml -e @examples/topics_example.yml --check -vv
+#
+# Common topic configurations:
+# - min.insync.replicas: Minimum replicas that must acknowledge writes
+# - retention.ms: Time-based retention (milliseconds)
+# - retention.bytes: Size-based retention (bytes)
+# - segment.ms: Time after which log segment is rolled
+# - cleanup.policy: "delete" or "compact" or "compact,delete"
+# - compression.type: "uncompressed", "snappy", "lz4", "gzip", "producer"
+# - max.message.bytes: Maximum message size
+# - unclean.leader.election.enable: Allow out-of-sync replicas to become leader

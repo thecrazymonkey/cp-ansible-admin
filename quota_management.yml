@@ -5,10 +5,10 @@
   environment: "{{proxy_env}}"
 
   tasks:
-  - name: Set Variables
-    import_role:
-      name: common
-      
-  - name: Process Quota
-    import_role: 
-      name: quota
+    - name: Set Variables
+      import_role:
+        name: common
+
+    - name: Process Quota
+      import_role:
+        name: quota

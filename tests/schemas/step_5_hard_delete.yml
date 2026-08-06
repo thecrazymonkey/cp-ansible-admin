@@ -1,0 +1,17 @@
+---
+# Step 5: Hard delete — remove all versions of all subjects
+schema_update: false
+schemas:
+  topics:
+    - name: schema-test-avro
+      value:
+        schema_delete_all: true
+        schema_file_src_path: "examples/schemas/user.avsc"
+    - name: schema-test-proto
+      value:
+        schema_delete_all: true
+        schema_file_src_path: "examples/schemas/user.proto"
+    - name: schema-test-json
+      value:
+        schema_delete_all: true
+        schema_file_src_path: "examples/schemas/user.json"
