@@ -36,7 +36,10 @@
 
     - name: To Add Users/Clients Quotas
       set_fact:
-        quotas_to_add_entity: "{{quotas_to_add_entity + [{entity: quota_state_entity, 'clients': [dict(_skeys|zip(_svals))]}]}}"
+        # the entity name must come from the desired state: for a user that does not exist
+        # yet quota_state_entity is {}, which lands in the CLI as --entity-name {} and makes
+        # every new user collide on the same bogus principal
+        quotas_to_add_entity: "{{quotas_to_add_entity + [{entity: quota_desired_entity, 'clients': [dict(_skeys|zip(_svals))]}]}}"
       # if state if empty for the main item or
       loop: "{{(clients_desired+clients_state)|groupby('clients')}}"
       when: clients_desired|length>0 and (_diff_keys|length>0 or _diff_vals|length>0)

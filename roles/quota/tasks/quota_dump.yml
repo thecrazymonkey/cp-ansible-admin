@@ -2,9 +2,12 @@
 # Low level topic operations - using Confluent Server v3 API
 - name: List quotas
 # not supported via REST API yet - needs direct call to Kafka Admin API
-  shell: >
-      {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}}
-      --describe --entity-type {{entity}} --command-config {{kafka_broker_client_config_file}}
+  ansible.builtin.command:
+    argv: >-
+      {{ [binary_base_path ~ '/bin/kafka-configs',
+          '--bootstrap-server', kafka_broker_hostname ~ ':' ~ kafka_broker_port,
+          '--describe', '--entity-type', entity,
+          '--command-config', kafka_broker_client_config_file] }}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: quotas_result
@@ -41,11 +44,17 @@
     verbosity: 3
 
 - name: List quotas combined
+# users+clients is a users-only concern. The guard belongs on the block: gating only the
+# command left the tasks below reading a skipped quotas_result, which has no stdout_lines.
+  when: entity == 'users'
   block:
   # not supported via REST API yet - needs direct call to Kafka Admin API
-    - shell: >
-        {{ binary_base_path }}/bin/kafka-configs --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}}
-        --describe --entity-type {{entity}} --entity-type clients --command-config {{kafka_broker_client_config_file}}
+    - ansible.builtin.command:
+        argv: >-
+          {{ [binary_base_path ~ '/bin/kafka-configs',
+              '--bootstrap-server', kafka_broker_hostname ~ ':' ~ kafka_broker_port,
+              '--describe', '--entity-type', entity, '--entity-type', 'clients',
+              '--command-config', kafka_broker_client_config_file] }}
       environment:
         CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
       register: quotas_result
@@ -53,7 +62,6 @@
       until: quotas_result.rc == 0 and 'ERROR' not in quotas_result.stderr
       changed_when: false
       check_mode: false
-      when: entity == 'users'
 
     - debug:
         msg: "{{item}}"
@@ -92,7 +100,9 @@
     - set_fact:
         # merge base users values and clients list
         quotas_current_tmp: "{{quotas_current_tmp | d([]) + [item.1|combine()] }}"
-      loop: "{{(quotas_current[entity]+quotas_current_tmp2)|groupby(entity)}}"
+      # Ansible renders loop before evaluating the block's when, so both operands must
+      # survive the clients pass where the block is skipped and these facts are unset
+      loop: "{{ (quotas_current[entity] | d([]) + quotas_current_tmp2 | d([])) | groupby(entity) }}"
 
     - set_fact:
         quotas_current: "{{ quotas_current| combine({entity: quotas_current_tmp}) }}"

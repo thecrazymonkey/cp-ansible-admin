@@ -6,10 +6,10 @@
       copy:
         content: "{{to_dump | to_nice_yaml(indent=2)}}"
         dest: "{{quotas_dump_destination}}"
-        mode: '0644'
+        mode: '0600'
       check_mode: false
       vars:
         to_dump: "{{ {'quotas': quotas_current} }}"
       no_log: false
   when:
-    - quotas_dump_file
+    - quotas_dump_file|bool
