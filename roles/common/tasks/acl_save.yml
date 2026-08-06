@@ -50,4 +50,4 @@
         to_dump: "{{ {varname: acl_mapped} }}"
       no_log: false
   when:
-    - acl_dump_file
+    - acl_dump_file|bool

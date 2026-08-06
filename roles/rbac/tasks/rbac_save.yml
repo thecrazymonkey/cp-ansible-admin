@@ -21,4 +21,4 @@
         to_dump: "{{ {'rolebindings': rbac_mapped} }}"
       no_log: false
   when:
-    - rbac_dump_file
+    - rbac_dump_file|bool

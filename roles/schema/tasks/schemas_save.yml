@@ -12,4 +12,4 @@
         to_dump: "{{ {'schemas': schemas_current} }}"
       no_log: false
   when:
-    - schema_dump_file
+    - schema_dump_file|bool
