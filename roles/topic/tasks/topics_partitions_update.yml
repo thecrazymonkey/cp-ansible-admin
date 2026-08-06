@@ -4,6 +4,7 @@
   uri:
     url: "{{rest_server_url}}{{url_cluster_prefix}}/v3/clusters/{{cluster_id}}/topics/{{item.topic_name}}"
     method: PATCH
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
@@ -24,15 +25,25 @@
 # pass 405 into the cli processing
 
 - name: Add partitions CLI
-# not supported via REST API yet - needs direct call to Kafka Admin API
-  shell: |
-    {{ binary_base_path }}/bin/kafka-topics --bootstrap-server {{kafka_broker_hostname}}:{{kafka_broker_port}} \
-      --alter --topic {{ item.topic_name }} --partitions {{ item.partitions_count }} --command-config {{kafka_broker_client_config_file}}
+# not supported via REST API yet - needs direct call to Kafka Admin API.
+# This fallback is NOT pre-7.0 compatibility: the v3 PATCH partitions_count endpoint
+# can answer 405 on any version, so it stays even though the dump requires CP 7.0+.
+# Loops over the PATCH results so each topic is routed on its own status - a mixed
+# 200/405 batch would otherwise be decided by whatever the first topic returned.
+  ansible.builtin.command:
+    argv: >-
+      {{ [binary_base_path ~ '/bin/kafka-topics',
+          '--bootstrap-server', kafka_broker_hostname ~ ':' ~ kafka_broker_port,
+          '--alter', '--topic', patch_result.item.topic_name,
+          '--partitions', patch_result.item.partitions_count | string,
+          '--command-config', kafka_broker_client_config_file] }}
   environment:
     CONFLUENT_SECURITY_MASTER_KEY: "{{ secrets_protection_masterkey }}"
   register: topics_result
   # stdout_lines will have topics with URPs and stderr has WARN and ERROR level logs
   until: topics_result.rc == 0 and 'ERROR' not in topics_result.stderr
   changed_when: "topics_result.rc == 0"
-  loop: "{{topics_in}}"
-  when: _result.results[0].status == 405
+  loop: "{{ _result.results | d([]) }}"
+  loop_control:
+    loop_var: patch_result
+  when: patch_result.status == 405

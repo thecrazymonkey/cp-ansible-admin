@@ -12,7 +12,7 @@
       client_id: "{{ _user }}"
       client_secret: "{{ _user_password }}"
     status_code: 200
-    timeout: 30
+    timeout: "{{ oauth_timeout }}"
   register: result
   check_mode: false
   no_log: true

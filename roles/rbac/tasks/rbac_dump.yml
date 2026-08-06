@@ -16,6 +16,7 @@
     - uri:
         url: "{{mds_server_url}}/security/1.0/roleNames"
         method: GET
+        timeout: "{{ api_timeout }}"
         validate_certs: true
         client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
         client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
@@ -38,6 +39,7 @@
   uri:
     url: "{{mds_server_url}}/security/1.0/lookup/role/{{ item }}"
     method: POST
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
@@ -66,6 +68,7 @@
   uri:
     url: "{{mds_server_url}}/security/1.0/principals/{{item.principal}}/roles/{{item.role}}/resources"
     method: POST
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"

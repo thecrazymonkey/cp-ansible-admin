@@ -3,6 +3,7 @@
   uri:
     url: "{{connectors_server_url}}/connectors/{{item.name}}/config"
     method: "{{ http_method }}"
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
@@ -16,7 +17,9 @@
     body: "{{ item }}"
     body_format: json
   register: result
-  changed_when: result.status == http_status_code
+  # http_status_code is a list for PUT ([200, 201]) and a scalar for DELETE (204),
+  # so normalise before the membership test - a bare == never matches the list form
+  changed_when: result.status in ([http_status_code] | flatten)
   loop: "{{ connectors_op_list }}"
   when: http_method == "PUT"
 
@@ -24,6 +27,7 @@
   uri:
     url: "{{connectors_server_url}}/connectors/{{ item }}"
     method: "{{ http_method }}"
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
@@ -35,6 +39,8 @@
       Authorization: "{{ authorization_header }}"
       Content-Type: application/json
   register: result
-  changed_when: result.status == http_status_code
+  # http_status_code is a list for PUT ([200, 201]) and a scalar for DELETE (204),
+  # so normalise before the membership test - a bare == never matches the list form
+  changed_when: result.status in ([http_status_code] | flatten)
   loop: "{{ connectors_op_list }}"
   when: http_method == "DELETE"

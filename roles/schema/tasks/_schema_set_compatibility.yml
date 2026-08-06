@@ -3,6 +3,7 @@
   ansible.builtin.uri:
     url: "{{ curl_config_api_url | trim }}/{{ _subject_name }}"
     method: GET
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
@@ -18,6 +19,7 @@
   ansible.builtin.uri:
     url: "{{ curl_config_api_url | trim }}/{{ _subject_name }}"
     method: PUT
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"

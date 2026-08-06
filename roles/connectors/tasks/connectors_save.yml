@@ -6,10 +6,11 @@
       copy:
         content: "{{to_dump | to_nice_yaml(indent=2)}}"
         dest: "{{connectors_dump_destination}}"
-        mode: '0644'
+        mode: '0600'
       check_mode: false
       vars:
         to_dump: "{{ {'connectors': connectors_current} }}"
-      no_log: false
+      # connector configs can embed credentials (JDBC passwords, API keys)
+      no_log: true
   when:
     - connectors_dump_file|bool

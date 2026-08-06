@@ -3,6 +3,7 @@
   ansible.builtin.uri:
     url: "{{ curl_subjects_api_url | trim }}/{{ _subject_name }}/versions/latest"
     method: DELETE
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
@@ -19,6 +20,7 @@
   ansible.builtin.uri:
     url: "{{ curl_subjects_api_url | trim }}/{{ _subject_name }}"
     method: DELETE
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
@@ -35,6 +37,7 @@
   ansible.builtin.uri:
     url: "{{ curl_subjects_api_url | trim }}/{{ _subject_name }}?permanent=true"
     method: DELETE
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"

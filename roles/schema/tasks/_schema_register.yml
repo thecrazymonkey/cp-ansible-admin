@@ -8,6 +8,7 @@
   ansible.builtin.uri:
     url: "{{ curl_subjects_api_url | trim }}/{{ _subject_name }}/versions"
     method: POST
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"

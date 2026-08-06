@@ -19,7 +19,7 @@ topic_protected: ^_confluent.*|^connect.*|^ksql.*|_schemas|^confluent.*
 topic_whitelist: ".*"
 # for dumping the current state
 topic_dump_file: false
-topic_dump_destination: /tmp/topic_dump_out.yml
+topic_dump_destination: ./topic_dump_out.yml
 
 # global variables
 topics_current: []

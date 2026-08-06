@@ -5,11 +5,12 @@ connectors_user: user
 connectors_user_password: user-secret
 
 connectors_dump_file: false
-connectors_dump_destination: /tmp/connectors_dump_out.yml
+connectors_dump_destination: ./connectors_dump_out.yml
 connectors: []
 
 # global variables
 connectors_current: []
 connectors_to_add: []
 connectors_to_delete: []
-connectors_delete_enabled: true
+# destructive - must be explicitly enabled per run/inventory
+connectors_delete_enabled: false

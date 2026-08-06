@@ -1,12 +1,13 @@
 ---
-# build a configuration structure from current state of rolebindings in the cluster
+# build a configuration structure from current state of connectors in the cluster
 - name: Initialize connectors current state
   ansible.builtin.set_fact:
     connectors_current: []
 
-- name: Get All Connectors
+- name: Get All Connectors With Configs
+# single batch call (?expand=info) instead of one config call per connector
   ansible.builtin.uri:
-    url: "{{connectors_server_url}}/connectors"
+    url: "{{connectors_server_url}}/connectors?expand=info"
     method: GET
     validate_certs: true
     force_basic_auth: true
@@ -16,15 +17,26 @@
     force: true
     headers:
       Authorization: "{{ authorization_header }}"
+    timeout: "{{ api_timeout }}"
   register: connectors_list_tmp
   check_mode: false
 
-- name: Process List Of Connectors
-  include_tasks: tasks/connectors_dump_tasks.yml
-  loop: "{{ connectors_list_tmp.json }}"
+- name: Assert Connect Expanded The Connector List
+# Connect older than 5.5 ignores ?expand= and returns a plain list of names.
+# Fail loudly rather than build an empty current state, which would make every
+# existing connector look like it needs creating.
+  ansible.builtin.assert:
+    that: connectors_list_tmp.json is mapping
+    fail_msg: >-
+      {{ connectors_server_url }}/connectors?expand=info returned a plain connector
+      list instead of an expanded map - Kafka Connect 5.5 or later is required.
+    success_msg: Connect returned an expanded connector map
   when: connectors_list_tmp.json | d([]) | length > 0
-  loop_control:
-    loop_var: connector_item
+
+- name: Build connectors current state
+  ansible.builtin.set_fact:
+    connectors_current: "{{ connectors_list_tmp.json | dict2items | map(attribute='value.info.config') | list }}"
+  when: connectors_list_tmp.json | d({}) | length > 0
 
 - name: Debug connectors current state
   ansible.builtin.debug:

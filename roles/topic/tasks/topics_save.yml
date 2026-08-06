@@ -6,7 +6,7 @@
       copy:
         content: "{{to_dump | to_nice_yaml(indent=2)}}"
         dest: "{{topic_dump_destination}}"
-        mode: '0644'
+        mode: '0600'
       check_mode: false
       vars:
         to_dump: "{{ {'topics': topics_current} }}"

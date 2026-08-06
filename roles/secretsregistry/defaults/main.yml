@@ -1,7 +1,8 @@
 ---
 # connectivity variables (following topic role pattern)
 # Connect REST API base URL (default port 8083)
-rest_server_url: http://connect.example.com:8083
+# https by default - this API carries secret values in request/response bodies
+rest_server_url: https://connect.example.com:8083
 rest_user: admin
 rest_user_password: admin
 
@@ -31,11 +32,11 @@ secret_whitelist: ".*"
 
 # for dumping the current state
 secret_dump_file: false
-secret_dump_destination: /tmp/secret_dump_out.yml
+secret_dump_destination: ./secret_dump_out.yml
 
 # backup settings
 secret_backup_enabled: false
-secret_backup_destination: /tmp/secret_backup_out.yml
+secret_backup_destination: ./secret_backup_out.yml
 
 # Connect Secret Registry specific settings
 # Kafka topic where secrets are stored (default: _confluent-secrets)
@@ -48,7 +49,7 @@ connect_cluster_id: ""
 kafka_cluster_id: ""
 
 # API settings
-secret_timeout: 30
+# request timeout is the shared api_timeout from the common role
 # Default secret version to retrieve (latest, or specific version number)
 secret_default_version: "latest"
 

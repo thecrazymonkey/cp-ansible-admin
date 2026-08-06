@@ -5,7 +5,7 @@ rest_user: user
 rest_user_password: user-secret
 
 zacl_dump_file: false
-zacl_dump_destination: /tmp/zacl_dump_out.yml
+zacl_dump_destination: ./zacl_dump_out.yml
 zacls: []
 
 # global variables

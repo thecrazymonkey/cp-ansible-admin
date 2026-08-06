@@ -1,4 +1,19 @@
 ---
+- name: Warn About Deprecated secret_timeout
+# secret_timeout was folded into the shared api_timeout. Honour a stale inventory
+# rather than silently reverting the configured value to the api_timeout default.
+  ansible.builtin.debug:
+    msg: >-
+      DEPRECATED: secret_timeout is replaced by the shared api_timeout.
+      Using your secret_timeout value ({{ secret_timeout }}s) for this run -
+      rename it to api_timeout in your inventory.
+  when: secret_timeout is defined
+
+- name: Honour Deprecated secret_timeout
+  ansible.builtin.set_fact:
+    api_timeout: "{{ secret_timeout }}"
+  when: secret_timeout is defined
+
 - name: Authorization Header
   vars:
     _user: "{{ rest_user if not oauth_enabled else oauth_client_id }}"
@@ -13,7 +28,7 @@
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
     client_key: "{{ none if client_tls_key is not defined else client_tls_key }}"
     ca_path: "{{ none if ca_tls_path is not defined else ca_tls_path }}"
-    timeout: "{{ secret_timeout }}"
+    timeout: "{{ api_timeout }}"
     headers:
       Authorization: "{{ authorization_header }}"
     status_code: [200]

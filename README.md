@@ -6,6 +6,17 @@ A comprehensive Ansible project for managing Confluent Platform components throu
 
 The Confluent Platform REST Admin project enables infrastructure-as-code management of Confluent Platform environments. It supports both new cluster deployments and existing cluster management by performing initial state dumps and applying desired configurations through REST APIs and CLI tools.
 
+## Requirements
+
+- **Confluent Platform 7.0 or later** (verified against CP 8.0). The topic role requires
+  `partitions_count` in the `/kafka/v3/clusters/{id}/topics` response — it asserts this and
+  fails with an explicit message rather than dumping incomplete state — and fetches every
+  topic's configuration in one call to `/kafka/v3/clusters/{id}/topics/-/configs`. The
+  pre-7.0 fallbacks that issued one request per topic have been removed.
+- **Kafka Connect 5.5 or later** for the connectors role, which uses `/connectors?expand=info`
+  to retrieve all connector configurations in a single call. Older workers ignore `expand` and
+  return a plain name list; the role asserts on this and fails with a version message.
+
 ## Supported Use Cases
 
 1. **Topic Management** - Create, update, delete topics with configuration management
@@ -121,6 +132,19 @@ RBAC management uses separate MDS (Metadata Service) variables:
 | `oauth_client_secret` | `""` | OAuth client secret |
 | `cluster_id` | `""` | Kafka cluster ID (auto-discovered if empty) |
 | `binary_base_path` | `/home/confluent/confluent-7.0.1` | Path to Confluent binaries |
+| `api_timeout` | `30` | Timeout in seconds for every Confluent REST API call, across all roles |
+| `oauth_timeout` | `{{ api_timeout }}` | Timeout in seconds for the IdP token call only |
+
+> Both are defined in the `common` role, which every management playbook imports first.
+>
+> `oauth_timeout` defaults to `api_timeout`, so setting `api_timeout` alone still covers
+> everything. Override it separately when your identity provider is slower than the Confluent
+> APIs — lowering `api_timeout` to fail fast on REST calls would otherwise shorten the token
+> call too.
+>
+> `api_timeout` replaces the former `secret_timeout`. An inventory that still sets
+> `secret_timeout` keeps working: the `secretsregistry` role honours the value for that run and
+> prints a deprecation notice telling you to rename it.
 
 ### TLS Configuration
 
@@ -315,10 +339,13 @@ Each role includes protection mechanisms:
 Delete operations are controlled by flags:
 
 - `topic_delete_enabled` (default: `false`)
-- `rbac_delete_enabled` (default: `true`)
-- `quotas_delete_enabled` (default: `true`)
-- `connectors_delete_enabled` (default: `true`)
+- `rbac_delete_enabled` (default: `false`)
+- `quotas_delete_enabled` (default: `false`)
+- `connectors_delete_enabled` (default: `false`)
+- `acl_delete_enabled` (default: `false`)
 - `secret_delete_enabled` (default: `false`)
+
+All delete flags default to `false` — deletions must be explicitly enabled per run or inventory.
 
 ### State Backup
 
@@ -327,8 +354,14 @@ All roles support dumping current state:
 ```yaml
 # Enable state dump
 <role>_dump_file: true
-<role>_dump_destination: /tmp/<role>_dump_out.yml
+<role>_dump_destination: ./<role>_dump_out.yml
 ```
+
+Dump files are written with mode `0600`. They default to the working directory and the default
+filenames are listed in `.gitignore` — **do not commit them**, and change `.gitignore` too if you
+point a `_dump_destination` at a different path inside the repo. Connector dumps can embed
+credentials (JDBC passwords, API keys), and Secret Registry dumps contain secret values in
+plaintext.
 
 ## Check Mode Support
 

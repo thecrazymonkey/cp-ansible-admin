@@ -13,6 +13,7 @@
   uri:
     url: "{{mds_server_url}}/security/1.0/acls:search"
     method: POST
+    timeout: "{{ api_timeout }}"
     validate_certs: true
     force_basic_auth: true
     client_cert: "{{ none if client_tls_cert is not defined else client_tls_cert }}"
